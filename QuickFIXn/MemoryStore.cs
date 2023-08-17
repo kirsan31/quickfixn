@@ -10,23 +10,27 @@ namespace QuickFix
     {
         #region Private Members
 
-        System.Collections.Generic.Dictionary<SeqNumType, string> messages_;
+        Dictionary<SeqNumType, string> messages_;
         DateTime? creationTime;
 
         #endregion
 
         public MemoryStore()
         {
-            messages_ = new System.Collections.Generic.Dictionary<SeqNumType, string>();
+            messages_ = new Dictionary<SeqNumType, string>();
             Reset();
         }
 
         public void Get(SeqNumType begSeqNo, SeqNumType endSeqNo, List<string> messages)
         {
+            var msgs = messages_;
+            if (msgs is null)
+                return;
+
             for (SeqNumType current = begSeqNo; current <= endSeqNo; current++)
             {
-                if (messages_.ContainsKey(current))
-                    messages.Add(messages_[current]);
+                if (msgs.ContainsKey(current))
+                    messages.Add(msgs[current]);
             }
         }
 
@@ -34,7 +38,11 @@ namespace QuickFix
 
         public bool Set(SeqNumType msgSeqNum, string msg)
         {
-            messages_[msgSeqNum] = msg;
+            var msgs = messages_;
+            if (msgs is null)
+                return false;
+
+            msgs[msgSeqNum] = msg;
             return true;
         }
 
@@ -47,7 +55,7 @@ namespace QuickFix
         public void IncrNextTargetMsgSeqNum()
         { ++NextTargetMsgSeqNum; }
 
-        public System.DateTime? CreationTime
+        public DateTime? CreationTime
         {
             get { return creationTime; }
             internal set { creationTime = value; }
@@ -57,7 +65,7 @@ namespace QuickFix
         {
             NextSenderMsgSeqNum = 1;
             NextTargetMsgSeqNum = 1;
-            messages_.Clear();
+            messages_?.Clear();
             creationTime = DateTime.UtcNow;
         }
 
@@ -69,18 +77,12 @@ namespace QuickFix
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-        private bool _disposed = false;
+
         protected virtual void Dispose(bool disposing)
         {
-            if (_disposed) return;
             if (disposing)
-            {
                 messages_ = null;
-            }
-            _disposed = true;
         }
-
-        ~MemoryStore() => Dispose(false);
         #endregion
     }
 }

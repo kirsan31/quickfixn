@@ -13,13 +13,13 @@ namespace QuickFix
     {
         
 
-        private Dictionary<SessionID, Session> sessions_ = new Dictionary<SessionID, Session>();
+        private readonly Dictionary<SessionID, Session> sessions_ = new Dictionary<SessionID, Session>();
         private SessionSettings settings_;
-        private Dictionary<IPEndPoint, AcceptorSocketDescriptor> socketDescriptorForAddress_ = new Dictionary<IPEndPoint, AcceptorSocketDescriptor>();
+        private readonly Dictionary<IPEndPoint, AcceptorSocketDescriptor> socketDescriptorForAddress_ = new Dictionary<IPEndPoint, AcceptorSocketDescriptor>();
         private SessionFactory sessionFactory_;
-        private bool isStarted_ = false;
-        private bool _disposed = false;
-        private object sync_ = new object();
+        private bool isStarted_;
+        private bool _disposed;
+        private readonly object sync_ = new object();
 
         #region Constructors
 
@@ -404,6 +404,5 @@ namespace QuickFix
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-        ~ThreadedSocketAcceptor() => Dispose(false);
     }
 }

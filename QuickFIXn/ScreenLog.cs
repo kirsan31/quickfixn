@@ -6,10 +6,10 @@ namespace QuickFix
     /// </summary>
     public class ScreenLog : ILog
     {
-        private object sync_ = new object();
-        private bool logIncoming_;
-        private bool logOutgoing_;
-        private bool logEvent_;
+        private readonly object sync_ = new object();
+        private readonly bool logIncoming_;
+        private readonly bool logOutgoing_;
+        private readonly bool logEvent_;
 
         public ScreenLog(SessionID sessionID, bool logIncoming, bool logOutgoing, bool logEvent)
         {
@@ -67,7 +67,6 @@ namespace QuickFix
         {
             // Nothing to dispose of...
         }
-        ~ScreenLog() => Dispose(false);
         #endregion
     }
 }

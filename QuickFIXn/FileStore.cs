@@ -22,18 +22,18 @@ namespace QuickFix
             }
         }
 
-        private string seqNumsFileName_;
-        private string msgFileName_;
-        private string headerFileName_;
-        private string sessionFileName_;
+        private readonly string seqNumsFileName_;
+        private readonly string msgFileName_;
+        private readonly string headerFileName_;
+        private readonly string sessionFileName_;
 
         private System.IO.FileStream seqNumsFile_;
         private System.IO.FileStream msgFile_;
         private System.IO.StreamWriter headerFile_;
 
-        private MemoryStore cache_ = new MemoryStore();
+        private readonly MemoryStore cache_ = new MemoryStore();
 
-        System.Collections.Generic.Dictionary<SeqNumType, MsgDef> offsets_ = new Dictionary<SeqNumType, MsgDef>();
+        readonly System.Collections.Generic.Dictionary<SeqNumType, MsgDef> offsets_ = new Dictionary<SeqNumType, MsgDef>();
 
         public static string Prefix(SessionID sessionID)
         {
@@ -90,16 +90,14 @@ namespace QuickFix
 
         private void PurgeSingleFile(System.IO.Stream stream, string filename)
         {
-            if (stream != null)
-                stream.Close();
+            stream?.Close();
             if (System.IO.File.Exists(filename))
                 System.IO.File.Delete(filename);
         }
 
         private void PurgeSingleFile(System.IO.StreamWriter stream, string filename)
         {
-            if (stream != null)
-                stream.Close();
+            stream?.Close();
             if (System.IO.File.Exists(filename))
                 System.IO.File.Delete(filename);
         }
@@ -293,7 +291,7 @@ namespace QuickFix
             GC.SuppressFinalize(this);
 
         }
-        private bool _disposed = false;
+        private bool _disposed;
         protected virtual void Dispose(bool disposing)
         {
             if (_disposed) return;
@@ -304,7 +302,6 @@ namespace QuickFix
             _disposed = true;
         }
 
-        ~FileStore() => Dispose(false);
         #endregion
     }
 }

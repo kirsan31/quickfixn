@@ -11,7 +11,6 @@ namespace Acceptor
     public class HttpServer : IDisposable
     {
         private readonly HttpListener _httpListener;
-        private Thread _connectionThread;
         private Boolean _running, _disposed;
         private readonly SessionSettings _sessionSettings;
         private StringBuilder _sbHtmlHeader;
@@ -38,8 +37,7 @@ namespace Acceptor
                 _httpListener.Start();
                 _running = true;
                 // Use a thread to listen to the Http requests
-                _connectionThread = new Thread(ConnectionThreadStart);
-                _connectionThread.Start();
+                new Thread(ConnectionThreadStart).Start();
             }
         }
 
@@ -566,7 +564,6 @@ namespace Acceptor
             return "<"+entryType+" align=\"left\">" + cellContent + "</"+entryType+">";
         }
 
-        ~HttpServer() => Dispose(false);
         public void Dispose()
         {
             Dispose(true);
@@ -584,11 +581,6 @@ namespace Acceptor
                 if (_running)
                 {
                     Stop();
-                }
-                if (_connectionThread != null)
-                {
-                    _connectionThread.Abort();
-                    _connectionThread = null;
                 }
             }
             _disposed = true;

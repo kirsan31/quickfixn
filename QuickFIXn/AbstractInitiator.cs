@@ -151,8 +151,7 @@ namespace QuickFix
             if (disconnectRequired)
                 session.Disconnect("Dynamic session removal");
             OnRemove(sessionID); // ensure session's reader thread is gone before we dispose session
-            if (session != null)
-                session.Dispose();
+            session?.Dispose();
             return true;
         }
 
@@ -399,7 +398,5 @@ namespace QuickFix
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-
-        ~AbstractInitiator() => Dispose(false);
     }
 }

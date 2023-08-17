@@ -18,13 +18,13 @@ namespace QuickFix
     {
         #region Private Members
 
-        private static Dictionary<SessionID, Session> sessions_ = new Dictionary<SessionID, Session>();
-        private object sync_ = new object();
-        private IResponder responder_ = null;
-        private SessionSchedule schedule_;
-        private SessionState state_;
-        private IMessageFactory msgFactory_;
-        private bool appDoesEarlyIntercept_;
+        private static readonly Dictionary<SessionID, Session> sessions_ = new Dictionary<SessionID, Session>();
+        private readonly object sync_ = new object();
+        private IResponder responder_;
+        private readonly SessionSchedule schedule_;
+        private readonly SessionState state_;
+        private readonly IMessageFactory msgFactory_;
+        private readonly bool appDoesEarlyIntercept_;
         private static readonly HashSet<string> AdminMsgTypes = new HashSet<string>() { "0", "A", "1", "2", "3", "4", "5" };
 
         #endregion
@@ -327,7 +327,7 @@ namespace QuickFix
         /// <returns>the true if Session exists, false otherwise</returns>
         public static bool DoesSessionExist(SessionID sessionID)
         {
-            return LookupSession(sessionID) == null ? false : true;
+            return LookupSession(sessionID) != null;
         }
 
         /// <summary>
@@ -1683,13 +1683,13 @@ namespace QuickFix
             GC.SuppressFinalize(this);
         }
 
-        private bool disposed_ = false;
+        private bool disposed_;
         protected virtual void Dispose(bool disposing)
         {
             if (disposed_) return;
             if (disposing)
             {
-                if (state_ != null) { state_.Dispose(); }
+                state_?.Dispose();
                 lock (sessions_)
                 {
                     sessions_.Remove(this.SessionID);
@@ -1702,6 +1702,5 @@ namespace QuickFix
         {
             get { return disposed_; }
         }
-        ~Session() => Dispose(false);
     }
 }

@@ -12,27 +12,27 @@ namespace QuickFix
     {
         #region Private Members
 
-        private object sync_ = new object();
+        private readonly object sync_ = new object();
         private bool isEnabled_ = true;
-        private bool receivedLogon_ = false;
-        private bool receivedReset_ = false;
-        private bool sentLogon_ = false;
-        private bool sentLogout_ = false;
-        private bool sentReset_ = false;
+        private bool receivedLogon_;
+        private bool receivedReset_;
+        private bool sentLogon_;
+        private bool sentLogout_;
+        private bool sentReset_;
         private string logoutReason_ = "";
-        private int testRequestCounter_ = 0;
-        private int heartBtInt_ = 0;
-        private int heartBtIntAsMilliSecs_ = 0;
+        private int testRequestCounter_;
+        private int heartBtInt_;
+        private int heartBtIntAsMilliSecs_;
         private DateTime lastReceivedTimeDT_ = DateTime.MinValue;
         private DateTime lastSentTimeDT_ = DateTime.MinValue;
         private int logonTimeout_ = 10;
         private long logonTimeoutAsMilliSecs_ = 10 * 1000;
         private int logoutTimeout_ = 2;
         private long logoutTimeoutAsMilliSecs_ = 2 * 1000;
-        private ResendRange resendRange_ = new ResendRange();
+        private readonly ResendRange resendRange_ = new ResendRange();
         private MessagesBySeqNum msgQueue = new MessagesBySeqNum();
 
-        private ILog log_;
+        private readonly ILog log_;
 
         #endregion
 
@@ -413,20 +413,17 @@ namespace QuickFix
             GC.SuppressFinalize(this);
         }
 
-        private bool _disposed = false;
+        private bool _disposed;
         protected virtual void Dispose(bool disposing)
         {
             if (_disposed) return;
             if (disposing)
             {
-                if (log_ != null) { log_.Dispose(); }
-                if (MessageStore != null) { MessageStore.Dispose(); }
+                log_?.Dispose();
+                MessageStore?.Dispose();
             }
             _disposed = true;
         }
-
-        ~SessionState() => Dispose(false);
-
     }
 }
 

@@ -11,12 +11,12 @@ namespace QuickFix
     public class SocketReader : IDisposable
     {
         public const int BUF_SIZE = 4096;
-        byte[] readBuffer_ = new byte[BUF_SIZE];
-        private Parser parser_ = new Parser();
+        readonly byte[] readBuffer_ = new byte[BUF_SIZE];
+        private readonly Parser parser_ = new Parser();
         private Session qfSession_; //will be null when initialized
-        private Stream stream_;     //will be null when initialized
-        private TcpClient tcpClient_;
-        private ClientHandlerThread responder_;
+        private readonly Stream stream_;     //will be null when initialized
+        private readonly TcpClient tcpClient_;
+        private readonly ClientHandlerThread responder_;
         private readonly AcceptorSocketDescriptor acceptorDescriptor_;
 
         /// <summary>
@@ -48,9 +48,9 @@ namespace QuickFix
                 int bytesRead = ReadSome(readBuffer_, 1000);
                 if (bytesRead > 0)
                     parser_.AddToStream(readBuffer_, bytesRead);
-                else if (null != qfSession_)
+                else
                 {
-                    qfSession_.Next();
+                    qfSession_?.Next();
                 }
 
                 ProcessStream();
@@ -326,6 +326,5 @@ namespace QuickFix
                 tcpClient_.Close();
             }
         }
-        ~SocketReader() => Dispose(false);
     }
 }

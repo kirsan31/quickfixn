@@ -29,8 +29,8 @@ namespace QuickFix
 
         public long Id { get; private set; }
 
-        private Thread thread_ = null;
-        private volatile bool isShutdownRequested_ = false;
+        private Thread thread_;
+        private volatile bool isShutdownRequested_;
         private SocketReader socketReader_;
         private FileLog log_;
 
@@ -105,8 +105,7 @@ namespace QuickFix
 
         protected void OnExited()
         {
-            if (Exited != null)
-                Exited(this, new ExitedEventArgs(this));
+            Exited?.Invoke(this, new ExitedEventArgs(this));
         }
 
         /// FIXME do real logging
@@ -138,14 +137,13 @@ namespace QuickFix
 
         #endregion
 
-        ~ClientHandlerThread() => Dispose(false);
         public void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
         }
 
-        private bool _disposed = false;
+        private bool _disposed;
         protected virtual void Dispose(bool disposing)
         {
             if (_disposed) return;

@@ -51,7 +51,7 @@ namespace QuickFix
                 return;
             Disconnect();
             // Make sure session's socket reader thread doesn't try to do a Join on itself!
-            if (Thread.CurrentThread.ManagedThreadId != thread_.ManagedThreadId)
+            if (Environment.CurrentManagedThreadId != thread_.ManagedThreadId)
                 thread_.Join(2000);
             thread_ = null;
         }

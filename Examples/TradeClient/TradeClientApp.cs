@@ -7,10 +7,10 @@ namespace TradeClient
 {
     public class TradeClientApp : QuickFix.MessageCracker, QuickFix.IApplication
     {
-        Session _session = null;
+        Session _session;
 
         // This variable is a kludge for developer test purposes.  Don't do this on a production application.
-        public IInitiator MyInitiator = null;
+        public IInitiator MyInitiator;
 
         #region IApplication interface overrides
 

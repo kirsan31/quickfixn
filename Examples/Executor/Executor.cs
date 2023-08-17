@@ -12,8 +12,8 @@ namespace Executor
     {
         static readonly decimal DEFAULT_MARKET_PRICE = 10;
 
-        int orderID = 0;
-        int execID = 0;
+        int orderID;
+        int execID;
 
         private string GenOrderID() { return (++orderID).ToString(); }
         private string GenExecID() { return (++execID).ToString(); }

@@ -632,7 +632,7 @@ namespace QuickFix
             if( FieldOrder != null )
                 return CalculateString(new StringBuilder(), FieldOrder);
             else
-                return CalculateString(new StringBuilder(), new int[0]);
+                return CalculateString(new StringBuilder(), Array.Empty<int>());
         }
 
         public virtual string CalculateString(StringBuilder sb, int[] preFields)

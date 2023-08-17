@@ -7,7 +7,7 @@ namespace QuickFix
         public const string SCREEN_LOG_SHOW_OUTGOING = "ScreenLogShowOutgoing";
         public const string SCREEN_LOG_SHOW_EVENTS   = "ScreenLogShowEvents";
 
-        private SessionSettings settings_ = null;
+        private SessionSettings settings_;
         private bool logIncoming_ = true;
         private bool logOutgoing_ = true;
         private bool logEvent_    = true;

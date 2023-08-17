@@ -29,8 +29,8 @@ namespace QuickFix
 
         private object sync_ = new object();
         private State state_ = State.RUNNING;
-        private long nextClientId_ = 0;
-        private Thread serverThread_ = null;
+        private long nextClientId_;
+        private Thread serverThread_;
         private Dictionary<long, ClientHandlerThread> clientThreads_ = new Dictionary<long, ClientHandlerThread>();
         private TcpListener tcpListener_;
         private SocketSettings socketSettings_;

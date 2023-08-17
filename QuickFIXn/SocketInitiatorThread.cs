@@ -17,7 +17,7 @@ namespace QuickFix
 
         public const int BUF_SIZE = 512;
 
-        private Thread thread_ = null;
+        private Thread thread_;
         private byte[] readBuffer_ = new byte[BUF_SIZE];
         private Parser parser_;
         protected Stream stream_;
@@ -25,7 +25,7 @@ namespace QuickFix
         private Session session_;
         private IPEndPoint socketEndPoint_;
         protected SocketSettings socketSettings_;
-        private bool isDisconnectRequested_ = false;
+        private bool isDisconnectRequested_;
 
         public SocketInitiatorThread(Transport.SocketInitiator initiator, Session session, IPEndPoint socketEndPoint, SocketSettings socketSettings)
         {

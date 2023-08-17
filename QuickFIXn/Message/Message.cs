@@ -59,7 +59,7 @@ namespace QuickFix
     public class Message : FieldMap
     {
         public const string SOH = "\u0001";
-        private int field_ = 0;
+        private int field_;
         private bool validStructure_;
 
         #region Properties

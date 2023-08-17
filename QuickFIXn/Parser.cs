@@ -8,7 +8,7 @@ namespace QuickFix
     public class Parser
     {
         private byte[] buffer_ = new byte[512];
-        int usedBufferLength = 0;
+        int usedBufferLength;
 
         public void AddToStream(byte[] data, int bytesAdded)
         {

@@ -18,7 +18,7 @@ namespace UnitTests
 
         private QuickFix.IMessageFactory _defaultMsgFactory = new QuickFix.DefaultMessageFactory();
 
-        public bool disconnected = false;
+        public bool disconnected;
 
         public bool Send(string msgStr)
         {
@@ -77,9 +77,9 @@ namespace UnitTests
 
     class MockApplication : QuickFix.IApplication
     {
-        public System.Exception fromAppException = null;
-        public System.Exception fromAdminException = null;
-        public QuickFix.DoNotSend doNotSendException = null;
+        public System.Exception fromAppException;
+        public System.Exception fromAdminException;
+        public QuickFix.DoNotSend doNotSendException;
 
         #region Application Members
 
@@ -167,14 +167,14 @@ namespace UnitTests
     [TestFixture]
     public class SessionTest
     {
-        MockResponder responder = null;
+        MockResponder responder;
 
-        QuickFix.SessionID sessionID = null;
-        QuickFix.SessionSettings settings = null;
-        MockApplication application = null;
-        QuickFix.Session session = null;
-        QuickFix.Session session2 = null;
-        QuickFix.Dictionary config = null;
+        QuickFix.SessionID sessionID;
+        QuickFix.SessionSettings settings;
+        MockApplication application;
+        QuickFix.Session session;
+        QuickFix.Session session2;
+        QuickFix.Dictionary config;
         SeqNumType seqNum = 1;
         Regex msRegex = new Regex(@"\.[\d]{1,3}$");
         Regex microsecondRegex = new Regex(@"\.[\d]{1,6}$");

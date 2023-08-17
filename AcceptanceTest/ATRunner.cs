@@ -5,7 +5,7 @@ namespace AcceptanceTest
 {
     public class ATRunner
     {
-        static bool _stopMe = false;
+        static bool _stopMe;
 
         static void Main(string[] args)
         {

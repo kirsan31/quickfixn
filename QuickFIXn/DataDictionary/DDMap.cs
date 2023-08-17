@@ -57,7 +57,7 @@ namespace QuickFix.DataDictionary
     {
         public int NumFld { get; set; }
         public int Delim { get; set; }
-        public Boolean Required = false;
+        public Boolean Required;
         public DDGrp() : base()
         {
             Delim = 0;

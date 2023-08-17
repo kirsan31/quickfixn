@@ -136,7 +136,7 @@ namespace QuickFix
 
         public static bool IsSet(string value)
         {
-            return value != null && value != NOT_SET;
+            return !string.IsNullOrEmpty(value);
         }
 
         public override string ToString()

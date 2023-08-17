@@ -58,7 +58,7 @@ namespace QuickFix
     /// </summary>
     public class Message : FieldMap
     {
-        public const string SOH = "\u0001";
+        public const char SOH = '\u0001';
         private int field_;
         private bool validStructure_;
 

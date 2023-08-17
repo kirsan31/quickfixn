@@ -2,11 +2,6 @@
 {
     public static class CharEncoding
     {
-        public static System.Text.Encoding DefaultEncoding;
-
-        static CharEncoding()
-        {
-            DefaultEncoding = System.Text.Encoding.GetEncoding("iso-8859-1");
-        }
+        public static readonly System.Text.Encoding DefaultEncoding = System.Text.Encoding.GetEncoding("iso-8859-1");
     }
 }

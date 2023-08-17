@@ -961,7 +961,7 @@ namespace UnitTests
             msg.Trailer.SetField(new Signature("woot"));
             msg.Trailer.SetField(new SignatureLength(4));
 
-            string foo = msg.ToString().Replace(Message.SOH, "|");
+            string foo = msg.ToString().Replace(Message.SOH, '|');
             StringAssert.EndsWith("|10=099|", foo);
         }
 
@@ -1026,7 +1026,7 @@ namespace UnitTests
             dd.LoadFIXSpec("FIX44");
             var msg = new Message();
             msg.FromJson(json, true, dd, dd, _defaultMsgFactory);
-            TestContext.Out.WriteLine(msg.ToString().Replace(Message.SOH, "|"));
+            TestContext.Out.WriteLine(msg.ToString().Replace(Message.SOH, '|'));
 
             // Then the Header of the Message should contain:
             Assert.That(msg.Header.GetString(Tags.BeginString), Is.EqualTo("FIX.4.4"));

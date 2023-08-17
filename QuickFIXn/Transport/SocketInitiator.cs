@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Net.Sockets;
-using System.Net;
-using System.Threading;
 using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading;
 
 namespace QuickFix.Transport
 {
@@ -15,18 +15,18 @@ namespace QuickFix.Transport
     {
         public const string SOCKET_CONNECT_HOST = "SocketConnectHost";
         public const string SOCKET_CONNECT_PORT = "SocketConnectPort";
-        public const string RECONNECT_INTERVAL  = "ReconnectInterval";
+        public const string RECONNECT_INTERVAL = "ReconnectInterval";
 
         #region Private Members
 
-        private volatile bool shutdownRequested_ = false;
+        private volatile bool shutdownRequested_;
         private DateTime lastConnectTimeDT = DateTime.MinValue;
         private int reconnectInterval_ = 30;
-        private SocketSettings socketSettings_ = new SocketSettings();
-        private Dictionary<SessionID, SocketInitiatorThread> threads_ = new Dictionary<SessionID, SocketInitiatorThread>();
-        private Dictionary<SessionID, int> sessionToHostNum_ = new Dictionary<SessionID, int>();
-        private object sync_ = new object();
-        
+        private readonly SocketSettings socketSettings_ = new SocketSettings();
+        private readonly Dictionary<SessionID, SocketInitiatorThread> threads_ = new Dictionary<SessionID, SocketInitiatorThread>();
+        private readonly Dictionary<SessionID, int> sessionToHostNum_ = new Dictionary<SessionID, int>();
+        private readonly object sync_ = new object();
+
         #endregion
 
         public SocketInitiator(IApplication application, IMessageStoreFactory storeFactory, SessionSettings settings)
@@ -43,8 +43,8 @@ namespace QuickFix.Transport
 
         public static void SocketInitiatorThreadStart(object socketInitiatorThread)
         {
-            SocketInitiatorThread t = socketInitiatorThread as SocketInitiatorThread;
-            if (t == null) return;
+            if (socketInitiatorThread is not SocketInitiatorThread t)
+                return;
 
             string exceptionEvent = null;
             try
@@ -61,6 +61,7 @@ namespace QuickFix.Transport
 
                     if (t.Initiator.IsStopped)
                         t.Initiator.RemoveThread(t);
+
                     t.Initiator.SetDisconnected(t.Session.SessionID);
                 }
                 catch (IOException ex) // Can be exception when connecting, during ssl authentication or when reading
@@ -80,19 +81,20 @@ namespace QuickFix.Transport
                     exceptionEvent = $"Unexpected exception: {ex}";
                 }
 
-                if (exceptionEvent != null)
+                if (exceptionEvent is not null)
                 {
                     if (t.Session.Disposed)
                     {
-                        // The session is disposed, and so is its log. We cannot use it to log the event,
-                        // so we resort to storing it in a local file.
+                        // The session is disposed, and so is its log. We cannot use it to log the event, so we resort to storing it in a local file.
                         try
                         {
-                            File.AppendAllText("DisposedSessionEvents.log", $"{System.DateTime.Now:G}: {exceptionEvent}{Environment.NewLine}");
+                            string fn = t.Session.Log?.LogPath;
+                            fn = !string.IsNullOrEmpty(fn) ? Path.Combine(fn, "DisposedSessionEvents.log") : "DisposedSessionEvents.log";
+                            File.AppendAllText(fn, $"{DateTime.Now:G}: {exceptionEvent}{Environment.NewLine}");
                         }
-                        catch (IOException)
+                        catch
                         {
-                            // Prevent IO exceptions from crashing the application
+                            // Prevent exceptions from crashing the application
                         }
                     }
                     else
@@ -107,7 +109,7 @@ namespace QuickFix.Transport
                 t.Initiator.SetDisconnected(t.Session.SessionID);
             }
         }
-        
+
         private void AddThread(SocketInitiatorThread thread)
         {
             lock (sync_)
@@ -127,24 +129,24 @@ namespace QuickFix.Transport
             // of dynamic session removal, so make sure we won't deadlock...
             if (Monitor.TryEnter(sync_))
             {
-                SocketInitiatorThread thread = null;
-                if (threads_.TryGetValue(sessionID, out thread))
+                if (threads_.TryGetValue(sessionID, out SocketInitiatorThread thread))
                 {
                     try
                     {
                         thread.Join();
                     }
                     catch { }
+
                     threads_.Remove(sessionID);
                 }
+
                 Monitor.Exit(sync_);
             }
         }
 
-        private IPEndPoint GetNextSocketEndPoint(SessionID sessionID, QuickFix.Dictionary settings)
+        private IPEndPoint GetNextSocketEndPoint(SessionID sessionID, Dictionary settings)
         {
-            int num;
-            if (!sessionToHostNum_.TryGetValue(sessionID, out num))
+            if (!sessionToHostNum_.TryGetValue(sessionID, out int num))
                 num = 0;
 
             string hostKey = SessionSettings.SOCKET_CONNECT_HOST + num;
@@ -166,14 +168,14 @@ namespace QuickFix.Transport
                 socketSettings_.ServerCommonName = hostName;
                 return new IPEndPoint(addrs.First(a => a.AddressFamily == AddressFamily.InterNetwork), port);
             }
-            catch (System.Exception e)
+            catch (Exception e)
             {
                 throw new ConfigError(e.Message, e);
             }
         }
 
         #region Initiator Methods
-        
+
         /// <summary>
         /// handle other socket options like TCP_NO_DELAY here
         /// </summary>
@@ -184,23 +186,23 @@ namespace QuickFix.Transport
             {
                 reconnectInterval_ = Convert.ToInt32(settings.Get().GetLong(SessionSettings.RECONNECT_INTERVAL));
             }
-            catch (System.Exception)
+            catch (Exception)
             { }
 
             // Don't know if this is required in order to handle settings in the general section
             socketSettings_.Configure(settings.Get());
-        }       
+        }
 
         protected override void OnStart()
         {
             shutdownRequested_ = false;
 
-            while(!shutdownRequested_)
+            while (!shutdownRequested_)
             {
                 double reconnectIntervalAsMilliseconds = 1000 * reconnectInterval_;
                 DateTime nowDT = DateTime.UtcNow;
 
-                if ((nowDT.Subtract(lastConnectTimeDT).TotalMilliseconds) >= reconnectIntervalAsMilliseconds)
+                if (nowDT.Subtract(lastConnectTimeDT).TotalMilliseconds >= reconnectIntervalAsMilliseconds)
                 {
                     Connect();
                     lastConnectTimeDT = nowDT;
@@ -248,15 +250,14 @@ namespace QuickFix.Transport
                 socketSettings.Configure(settings);
 
                 // Create a Ssl-SocketInitiatorThread if a certificate is given
-                SocketInitiatorThread t = new SocketInitiatorThread(this, session, socketEndPoint, socketSettings);                
+                SocketInitiatorThread t = new SocketInitiatorThread(this, session, socketEndPoint, socketSettings);
                 t.Start();
                 AddThread(t);
 
             }
-            catch (System.Exception e)
+            catch (Exception e)
             {
-                if (null != session)
-                    session.Log.OnEvent(e.Message);
+                session?.Log.OnEvent(e.Message);
             }
         }
 

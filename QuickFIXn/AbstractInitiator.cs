@@ -7,21 +7,21 @@ namespace QuickFix
     public abstract class AbstractInitiator : IInitiator
     {
         // from constructor
-        private IApplication _app = null;
-        private IMessageStoreFactory _storeFactory = null;
-        private SessionSettings _settings = null;
-        private ILogFactory _logFactory = null;
-        private IMessageFactory _msgFactory = null;
+        private readonly IApplication _app;
+        private readonly IMessageStoreFactory _storeFactory;
+        private readonly SessionSettings _settings;
+        private readonly ILogFactory _logFactory;
+        private readonly IMessageFactory _msgFactory;
 
-        private object sync_ = new object();
-        private Dictionary<SessionID, Session> sessions_ = new Dictionary<SessionID, Session>();
-        private HashSet<SessionID> sessionIDs_ = new HashSet<SessionID>();
-        private HashSet<SessionID> pending_ = new HashSet<SessionID>();
-        private HashSet<SessionID> connected_ = new HashSet<SessionID>();
-        private HashSet<SessionID> disconnected_ = new HashSet<SessionID>();
+        private readonly object sync_ = new object();
+        private readonly Dictionary<SessionID, Session> sessions_ = new Dictionary<SessionID, Session>();
+        private readonly HashSet<SessionID> sessionIDs_ = new HashSet<SessionID>();
+        private readonly HashSet<SessionID> pending_ = new HashSet<SessionID>();
+        private readonly HashSet<SessionID> connected_ = new HashSet<SessionID>();
+        private readonly HashSet<SessionID> disconnected_ = new HashSet<SessionID>();
         private bool isStopped_ = true;
         private Thread thread_;
-        private SessionFactory sessionFactory_ = null;
+        private SessionFactory sessionFactory_;
 
         #region Properties
 
@@ -377,7 +377,7 @@ namespace QuickFix
             return new HashSet<SessionID>(sessions_.Keys);
         }
 
-        private bool _disposed = false;
+        private bool _disposed;
         /// <summary>
         /// Any subclasses of AbstractInitiator should override this if they have resources to dispose
         /// that aren't already covered in its OnStop() handler.

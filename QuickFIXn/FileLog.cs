@@ -8,22 +8,25 @@ namespace QuickFix
     /// </summary>
     public class FileLog : ILog, System.IDisposable
     {
-        private object sync_ = new object();
+        private readonly object sync_ = new object();
 
         private System.IO.StreamWriter messageLog_;
         private System.IO.StreamWriter eventLog_;
 
         private string messageLogFileName_;
         private string eventLogFileName_;
+        private readonly string _fileLogPath;
 
 
         public FileLog(string fileLogPath)
         {
+            _fileLogPath = fileLogPath;
             Init(fileLogPath, "GLOBAL");
         }
 
         public FileLog(string fileLogPath, SessionID sessionID)
         {
+            _fileLogPath = fileLogPath;
             Init(fileLogPath, Prefix(sessionID));
         }   
         
@@ -70,6 +73,8 @@ namespace QuickFix
         }
 
         #region Log Members
+
+        public string LogPath => _fileLogPath;
 
         public void Clear()
         {
@@ -127,21 +132,23 @@ namespace QuickFix
             GC.SuppressFinalize(this);
         }
 
-        private bool _disposed = false;
+        private bool _disposed;
         protected virtual void Dispose(bool disposing)
         {
-            if (_disposed) return;
+            if (_disposed)
+                return;
+
             if (disposing)
             {
-                if (messageLog_ != null) { messageLog_.Dispose(); }
-                if (eventLog_ != null) { eventLog_.Dispose(); }
+                messageLog_?.Dispose();
+                eventLog_?.Dispose();
 
                 messageLog_ = null;
                 eventLog_ = null;
             }
+
             _disposed = true;
         }
-        ~FileLog() => Dispose(false);
         #endregion
     }
 }

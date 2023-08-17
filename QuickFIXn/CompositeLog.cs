@@ -8,9 +8,9 @@ namespace QuickFix
     /// </summary>
     internal class CompositeLog : ILog
     {
-        private ILog[] logs_;
+        private readonly ILog[] logs_;
 
-        private bool _disposed = false;
+        private bool _disposed;
 
         public CompositeLog(ILog[] logs)
         {
@@ -53,21 +53,22 @@ namespace QuickFix
 
         protected virtual void Dispose(bool disposing)
         {
-            if (_disposed) return;
+            if (_disposed)
+                return;
+
             if (disposing)
             {
                 foreach (var log in logs_)
                     log.Dispose();
             }
+
             _disposed = true;
         }
 
         private void DisposedCheck()
         {
             if (_disposed)
-                throw new System.ObjectDisposedException(this.GetType().Name);
+                throw new ObjectDisposedException(this.GetType().Name);
         }
-
-        ~CompositeLog() => Dispose(false);
     }
 }

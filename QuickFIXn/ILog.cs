@@ -29,5 +29,10 @@ namespace QuickFix
         /// </summary>
         /// <param name="s">event description</param>
         void OnEvent(string s);
+
+        /// <summary>
+        /// Path to logs if applicable.
+        /// </summary>
+        string LogPath { get => null; }
     }
 }

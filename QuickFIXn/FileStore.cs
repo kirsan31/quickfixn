@@ -210,7 +210,7 @@ namespace QuickFix
             int size = msgBytes.Length;
 
             StringBuilder b = new StringBuilder();
-            b.Append(msgSeqNum).Append(",").Append(offset).Append(",").Append(size);
+            b.Append(msgSeqNum).Append(',').Append(offset).Append(',').Append(size);
             headerFile_.WriteLine(b.ToString());
             headerFile_.Flush();
 

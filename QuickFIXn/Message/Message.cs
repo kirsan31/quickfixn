@@ -957,7 +957,7 @@ namespace QuickFix
                 // Populate the JSON list with the Group items
                 for (int counter = 1; counter <= fields.GroupCount(numInGroupField.Tag); counter++)
                 {
-                    sb.Append("{");
+                    sb.Append('{');
                     FieldMapToJSON(sb, dd, fields.GetGroup(counter, numInGroupField.Tag), humanReadableValues);
                     sb.Append("},");
                 }
@@ -1041,7 +1041,7 @@ namespace QuickFix
         /// <returns>a JSON string</returns>
         public string ToJSON(DataDictionary.DataDictionary dd, bool humanReadableValues)
         {
-            StringBuilder sb = new StringBuilder().Append("{").Append("\"Header\":{");
+            StringBuilder sb = new StringBuilder().Append('{').Append("\"Header\":{");
             FieldMapToJSON(sb, dd, Header,  humanReadableValues).Append("},\"Body\":{");
             FieldMapToJSON(sb, dd, this,    humanReadableValues).Append("},\"Trailer\":{");
             FieldMapToJSON(sb, dd, Trailer, humanReadableValues).Append("}}");

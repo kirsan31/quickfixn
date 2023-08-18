@@ -10,7 +10,7 @@ namespace QuickFix
         {
             QuickFix.Dictionary currentSection = null;
 
-            string line = null;
+            string line;
             while ((line = conf.ReadLine()) != null)
             {
                 line = line.Trim();

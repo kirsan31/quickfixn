@@ -954,8 +954,7 @@ namespace QuickFix
         public bool Verify(Message msg, bool checkTooHigh, bool checkTooLow)
         {
             SeqNumType msgSeqNum = 0;
-            string msgType = "";
-
+            string msgType;
             try
             {
                 msgType = msg.Header.GetString(Fields.Tags.MsgType);
@@ -1529,7 +1528,7 @@ namespace QuickFix
 
         protected void InsertSendingTime(FieldMap header)
         {
-            bool fix42OrAbove = false;
+            bool fix42OrAbove;
             if (this.SessionID.BeginString == FixValues.BeginString.FIXT11)
                 fix42OrAbove = true;
             else
@@ -1591,7 +1590,7 @@ namespace QuickFix
 
         protected void InsertOrigSendingTime(FieldMap header, System.DateTime sendingTime)
         {
-            bool fix42OrAbove = false;
+            bool fix42OrAbove;
             if (this.SessionID.BeginString == FixValues.BeginString.FIXT11)
                 fix42OrAbove = true;
             else

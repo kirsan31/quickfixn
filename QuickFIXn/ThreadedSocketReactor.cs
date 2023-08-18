@@ -157,12 +157,11 @@ namespace QuickFix
         {
             lock(sync_)
             {
-                ClientHandlerThread t = null;
+                ClientHandlerThread t;
                 if(clientThreads_.TryGetValue(e.ClientHandlerThread.Id, out t))
                 {
                     clientThreads_.Remove(t.Id);
                     t.Dispose();
-                    t = null;
                 }
             }
         }

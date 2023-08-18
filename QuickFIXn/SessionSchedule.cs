@@ -95,8 +95,7 @@ namespace QuickFix
                 throw new ArgumentException("Only UTC time is supported", "time");
 
             DateTime d = AdjustUtcDateTime(utc);
-            DateTime end = DateTime.MinValue;
-
+            DateTime end;
             if (WeeklySession)
             {
                 end = new DateTime(d.Year, d.Month, d.Day, EndTime.Hours, EndTime.Minutes, EndTime.Seconds, d.Kind);

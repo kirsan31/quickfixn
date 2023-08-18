@@ -24,10 +24,8 @@ namespace QuickFix
 
             if(buffer_.Length < 2)
                 return false;
-            
-            int pos = 0;
-            pos = IndexOf(buffer_, "8=", 0);
-            if(-1 == pos)
+            int pos = IndexOf(buffer_, "8=", 0);
+            if (-1 == pos)
                 return false;
 
             buffer_ = Remove(buffer_, pos);

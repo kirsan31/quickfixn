@@ -84,8 +84,7 @@ namespace QuickFix
         {
             Type messageType = message.GetType();
 
-            Action<Message, SessionID> onMessage = null;
-
+            Action<Message, SessionID> onMessage;
             if (_callCache.TryGetValue(messageType, out onMessage))
             {
                 onMessage(message, sessionID);

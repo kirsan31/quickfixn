@@ -277,9 +277,7 @@ namespace QuickFix
                 // increment group size
                 int groupsize = _groups[group.Field].Count;
                 int counttag = group.Field;
-                IntField count = null;
-
-                count = new IntField(counttag, groupsize);
+                IntField count = new IntField(counttag, groupsize);
                 this.SetField(count, true);
             }
         }

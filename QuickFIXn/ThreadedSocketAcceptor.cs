@@ -353,20 +353,25 @@ namespace QuickFix
         /// <returns>true if session removed or not already present; false if could not be removed due to an active connection</returns>
         public bool RemoveSession(SessionID sessionID, bool terminateActiveSession)
         {
-            Session session = null;
+            Session session;
             if (sessions_.TryGetValue(sessionID, out session))
             {
                 if (session.IsLoggedOn && !terminateActiveSession)
                     return false;
+
                 session.Disconnect("Dynamic session removal");
                 foreach (AcceptorSocketDescriptor descriptor in socketDescriptorForAddress_.Values)
+                {
                     if (descriptor.RemoveSession(sessionID))
                         break;
+                }
+
                 sessions_.Remove(sessionID);
                 session.Dispose();
                 lock (settings_)
                     settings_.Remove(sessionID);
             }
+
             return true;
         }
 

@@ -241,15 +241,15 @@ namespace QuickFix
 
         private void HandleExceptionInternal(Session quickFixSession, System.Exception cause)
         {
-            bool disconnectNeeded = true;
-            string reason = cause.Message;
+            bool disconnectNeeded;
+            string reason;
 
             System.Exception realCause = cause;
 
             // Unwrap socket exceptions from IOException in order for code below to work
             if (realCause is IOException && realCause.InnerException is SocketException)
                 realCause = realCause.InnerException;
-
+            
             /*
              TODO
             if(cause is FIXMessageDecoder.DecodeError && cause.InnerException != null)
@@ -261,6 +261,7 @@ namespace QuickFix
                     reason = "Socket exception (" + tcpClient_.Client.RemoteEndPoint + "): " + cause.Message;
                 else
                     reason = "Socket (" + tcpClient_.Client.RemoteEndPoint + "): " + cause.Message;
+
                 disconnectNeeded = true;
             }
             /*

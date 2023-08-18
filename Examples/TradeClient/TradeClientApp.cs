@@ -209,8 +209,7 @@ namespace TradeClient
         #region Message creation functions
         private QuickFix.FIX44.NewOrderSingle QueryNewOrderSingle44()
         {
-            QuickFix.Fields.OrdType ordType = null;
-
+            OrdType ordType;
             QuickFix.FIX44.NewOrderSingle newOrderSingle = new QuickFix.FIX44.NewOrderSingle(
                 QueryClOrdID(),
                 QuerySymbol(),
@@ -316,7 +315,7 @@ namespace TradeClient
             Console.Write("Side? ");
             string s = Console.ReadLine().Trim();
 
-            char c = ' ';
+            char c;
             switch (s)
             {
                 case "1": c = Side.BUY; break;
@@ -341,7 +340,7 @@ namespace TradeClient
             Console.Write("OrdType? ");
             string s = Console.ReadLine().Trim();
 
-            char c = ' ';
+            char c;
             switch (s)
             {
                 case "1": c = OrdType.MARKET; break;
@@ -371,7 +370,7 @@ namespace TradeClient
             Console.Write("TimeInForce? ");
             string s = Console.ReadLine().Trim();
 
-            char c = ' ';
+            char c;
             switch (s)
             {
                 case "1": c = TimeInForce.DAY; break;

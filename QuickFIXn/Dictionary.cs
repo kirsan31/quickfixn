@@ -61,7 +61,7 @@ namespace QuickFix
 
         public string GetString(string key)
         {
-            string val = "";
+            string val;
             if (!data_.TryGetValue(key.ToUpper(), out val))
                 throw new ConfigError("No value for key: " + key);
             return val;
@@ -260,7 +260,7 @@ namespace QuickFix
                 return false;
 
             // Could use LINQ query here, but this is probably faster!
-            string otherDictValue = null;
+            string otherDictValue;
             foreach (var kvp in data_)
                 if (!otherDict.data_.TryGetValue(kvp.Key, out otherDictValue) || otherDictValue != kvp.Value)
                     return false;

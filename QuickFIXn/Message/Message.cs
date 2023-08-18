@@ -408,8 +408,6 @@ namespace QuickFix
         {
             this.ApplicationDataDictionary = appDD;
             Clear();
-
-            string msgType = "";
             bool expectingHeader = true;
             bool expectingBody = true;
             int count = 0;
@@ -434,7 +432,7 @@ namespace QuickFix
 
                     if (Tags.MsgType.Equals(f.Tag))
                     {
-                        msgType = f.Obj;
+                        string msgType = f.Obj;
                         if (appDD != null)
                         {
                             msgMap = appDD.GetMapForMessage(msgType);
@@ -869,7 +867,6 @@ namespace QuickFix
         private static string FieldMapToXML(DataDictionary.DataDictionary dd, FieldMap fields, int space)
         {
             StringBuilder s = new StringBuilder();
-            string name = string.Empty;
 
             // fields
             foreach (var f in fields)
@@ -907,7 +904,6 @@ namespace QuickFix
         {
             IList<int> numInGroupTagList = fields.GetGroupTags();
             IList<Fields.IField> numInGroupFieldList = new List<Fields.IField>();
-            string valueDescription = "";
 
             // Non-Group Fields
             foreach (var field in fields)
@@ -921,11 +917,12 @@ namespace QuickFix
                     continue; // Groups will be handled below
                 }
 
-                if ((dd != null) && ( dd.FieldsByTag.ContainsKey(field.Value.Tag)))
+                if ((dd != null) && (dd.FieldsByTag.ContainsKey(field.Value.Tag)))
                 {
                     sb.Append("\"" + dd.FieldsByTag[field.Value.Tag].Name + "\":");
                     if (humanReadableValues)
                     {
+                        string valueDescription;
                         if (dd.FieldsByTag[field.Value.Tag].EnumDict.TryGetValue(field.Value.ToString(), out valueDescription))
                         {
                             sb.Append("\"" + valueDescription + "\",");
@@ -946,7 +943,7 @@ namespace QuickFix
             }
 
             // Group Fields
-            foreach(Fields.IField numInGroupField in numInGroupFieldList)
+            foreach (Fields.IField numInGroupField in numInGroupFieldList)
             {
                 // The name of the NumInGroup field is the key of the JSON list containing the Group items
                 if ((dd != null) && ( dd.FieldsByTag.ContainsKey(numInGroupField.Tag)))

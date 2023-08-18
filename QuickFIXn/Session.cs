@@ -681,7 +681,7 @@ namespace QuickFix
             catch (FieldNotFoundException e)
             {
                 this.Log.OnEvent("Rejecting invalid message, field not found: " + e.Message);
-                if ((SessionID.BeginString.CompareTo(FixValues.BeginString.FIX42) >= 0) && (message.IsApp()))
+                if ((string.CompareOrdinal(SessionID.BeginString, FixValues.BeginString.FIX42) >= 0) && (message.IsApp()))
                 {
                     GenerateBusinessMessageReject(message, Fields.BusinessRejectReason.CONDITIONALLY_REQUIRED_FIELD_MISSING, e.Field);
                 }
@@ -1075,7 +1075,7 @@ namespace QuickFix
 
         protected bool ShouldSendReset()
         {
-            return (this.SessionID.BeginString.CompareTo(FixValues.BeginString.FIX41) >= 0)
+            return (string.CompareOrdinal(SessionID.BeginString, FixValues.BeginString.FIX41) >= 0)
                 && (this.ResetOnLogon || this.ResetOnLogout || this.ResetOnDisconnect)
                 && (state_.NextSenderMsgSeqNum == 1)
                 && (state_.NextTargetMsgSeqNum == 1);
@@ -1179,7 +1179,7 @@ namespace QuickFix
             SeqNumType msgSeqNum = message.Header.GetULong(Tags.MsgSeqNum);
             string reason = FixValues.BusinessRejectReason.RejText[err];
             Message reject;
-            if (this.SessionID.BeginString.CompareTo(FixValues.BeginString.FIX42) >= 0)
+            if (string.CompareOrdinal(SessionID.BeginString, FixValues.BeginString.FIX42) >= 0)
             {
                 reject = msgFactory_.Create(this.SessionID.BeginString, MsgType.BUSINESS_MESSAGE_REJECT);
                 reject.SetField(new RefMsgType(msgType));
@@ -1233,10 +1233,11 @@ namespace QuickFix
             }
             else
             {
-                if (beginString.CompareTo(FixValues.BeginString.FIX42) >= 0)
+                if (string.CompareOrdinal(beginString, FixValues.BeginString.FIX42) >= 0)
                     endRangeSeqNum = 0;
-                else if (beginString.CompareTo(FixValues.BeginString.FIX41) <= 0)
+                else if (string.CompareOrdinal(beginString, FixValues.BeginString.FIX41) <= 0)
                     endRangeSeqNum = 999999;
+
                 endChunkSeqNum = endRangeSeqNum;
             }
 
@@ -1425,11 +1426,12 @@ namespace QuickFix
                 { }
             }
 
-            if (beginString.CompareTo(FixValues.BeginString.FIX42) >= 0)
+            if (string.CompareOrdinal(beginString, FixValues.BeginString.FIX42) >= 0)
             {
                 if (msgType.Length > 0)
                     reject.SetField(new Fields.RefMsgType(msgType));
-                if ((FixValues.BeginString.FIX42.Equals(beginString) && reason.Value <= FixValues.SessionRejectReason.INVALID_MSGTYPE.Value) || (beginString.CompareTo(FixValues.BeginString.FIX42) > 0))
+
+                if ((FixValues.BeginString.FIX42.Equals(beginString) && reason.Value <= FixValues.SessionRejectReason.INVALID_MSGTYPE.Value) || (string.CompareOrdinal(beginString, FixValues.BeginString.FIX42) > 0))
                 {
                     reject.SetField(new Fields.SessionRejectReason(reason.Value));
                 }
@@ -1445,7 +1447,7 @@ namespace QuickFix
             {
                 if (FixValues.SessionRejectReason.INVALID_MSGTYPE.Equals(reason))
                 {
-                    if (this.SessionID.BeginString.CompareTo(FixValues.BeginString.FIX43) >= 0)
+                    if (string.CompareOrdinal(SessionID.BeginString, FixValues.BeginString.FIX43) >= 0)
                         PopulateRejectReason(reject, reason.Description);
                     else
                         PopulateSessionRejectReason(reject, field, reason.Description, false);
@@ -1469,7 +1471,7 @@ namespace QuickFix
 
         protected void PopulateSessionRejectReason(Message reject, int field, string text, bool includeFieldInfo)
         {
-            if (this.SessionID.BeginString.CompareTo(FixValues.BeginString.FIX42) >= 0)
+            if (string.CompareOrdinal(SessionID.BeginString, FixValues.BeginString.FIX42) >= 0)
             {
                 reject.SetField(new Fields.RefTagID(field));
                 reject.SetField(new Fields.Text(text));
@@ -1531,7 +1533,7 @@ namespace QuickFix
             if (this.SessionID.BeginString == FixValues.BeginString.FIXT11)
                 fix42OrAbove = true;
             else
-                fix42OrAbove = this.SessionID.BeginString.CompareTo(FixValues.BeginString.FIX42) >= 0;
+                fix42OrAbove = string.CompareOrdinal(SessionID.BeginString, FixValues.BeginString.FIX42) >= 0;
 
             header.SetField(new Fields.SendingTime(System.DateTime.UtcNow, fix42OrAbove ? TimeStampPrecision : TimeStampPrecision.Second ) );
         }
@@ -1593,7 +1595,7 @@ namespace QuickFix
             if (this.SessionID.BeginString == FixValues.BeginString.FIXT11)
                 fix42OrAbove = true;
             else
-                fix42OrAbove = this.SessionID.BeginString.CompareTo(FixValues.BeginString.FIX42) >= 0;
+                fix42OrAbove = string.CompareOrdinal(SessionID.BeginString, FixValues.BeginString.FIX42) >= 0;
 
             header.SetField(new OrigSendingTime(sendingTime, fix42OrAbove ? TimeStampPrecision : TimeStampPrecision.Second ) );
         }

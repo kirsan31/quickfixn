@@ -62,7 +62,7 @@ namespace QuickFix
         public string GetString(string key)
         {
             string val;
-            if (!data_.TryGetValue(key.ToUpper(), out val))
+            if (!data_.TryGetValue(key.ToUpperInvariant(), out val))
                 throw new ConfigError("No value for key: " + key);
             return val;
         }
@@ -70,7 +70,7 @@ namespace QuickFix
         public String GetString(string key, bool capitalize)
         {
             string s = GetString(key);
-            return capitalize ? s.ToUpper() : s;
+            return capitalize ? s.ToUpperInvariant() : s;
         }
 
         public int GetInt(string key)
@@ -155,7 +155,7 @@ namespace QuickFix
 
         public System.DayOfWeek GetDay(string key)
         {
-            string abbr = GetString(key).Substring(0, 2).ToUpper();
+            string abbr = GetString(key).Substring(0, 2).ToUpperInvariant();
             switch(abbr)
             {
                 case "SU": return System.DayOfWeek.Sunday;
@@ -171,7 +171,7 @@ namespace QuickFix
 
         public TimeStampPrecision GetTimeStampPrecision( string key )
         {
-            string precision = GetString( key ).ToUpper();
+            string precision = GetString(key).ToUpperInvariant();
             switch( precision )
             {
                 case "SECOND":
@@ -191,7 +191,7 @@ namespace QuickFix
 
         public void SetString(string key, string val)
         {
-            data_[key.ToUpper()] = val;
+            data_[key.ToUpperInvariant()] = val;
         }
 
         public void SetLong(string key, long val)
@@ -226,7 +226,7 @@ namespace QuickFix
 
         public bool Has(string key)
         {
-            return data_.ContainsKey(key.ToUpper());
+            return data_.ContainsKey(key.ToUpperInvariant());
         }
 
         public void Merge(Dictionary toMerge)

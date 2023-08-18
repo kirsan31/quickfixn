@@ -1187,8 +1187,8 @@ namespace QuickFix
             else
             {
                 reject = msgFactory_.Create(this.SessionID.BeginString, MsgType.REJECT);
-                char[] reasonArray = reason.ToLower().ToCharArray();
-                reasonArray[0] = char.ToUpper(reasonArray[0]);
+                char[] reasonArray = reason.ToLowerInvariant().ToCharArray();
+                reasonArray[0] = char.ToUpperInvariant(reasonArray[0]);
                 reason = new string(reasonArray);
             }
             InitializeHeader(reject);

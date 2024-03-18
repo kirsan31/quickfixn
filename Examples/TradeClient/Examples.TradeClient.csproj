@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>net7.0</TargetFrameworks>
+    <TargetFrameworks>$(TFms)</TargetFrameworks>
     <RootNamespace>TradeClient</RootNamespace>
     <AssemblyName>TradeClient</AssemblyName>
     <Copyright>Copyright © Connamara Systems, LLC 2011</Copyright>

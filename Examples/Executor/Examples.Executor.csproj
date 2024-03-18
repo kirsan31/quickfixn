@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>net7.0</TargetFrameworks>
+    <TargetFrameworks>$(TFms)</TargetFrameworks>
     <RootNamespace>Executor</RootNamespace>
     <AssemblyName>Executor</AssemblyName>
     <Copyright>Copyright © Connamara Systems, LLC 2011</Copyright>

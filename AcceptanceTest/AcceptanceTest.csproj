@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>net7.0</TargetFrameworks>
+    <TargetFrameworks>$(TFms)</TargetFrameworks>
     <Platforms>AnyCPU;x64</Platforms>
     <IsPackable>false</IsPackable>
   </PropertyGroup>

@@ -47,12 +47,14 @@ namespace QuickFix
 
         public void Join()
         {
-            if (null == thread_)
+            if (thread_ is null)
                 return;
+
             Disconnect();
             // Make sure session's socket reader thread doesn't try to do a Join on itself!
             if (Environment.CurrentManagedThreadId != thread_.ManagedThreadId)
                 thread_.Join(2000);
+
             thread_ = null;
         }
 
@@ -196,8 +198,7 @@ namespace QuickFix
         public void Disconnect()
         {
             isDisconnectRequested_ = true;
-            if (stream_ != null)
-                stream_.Close();
+            stream_?.Close();
         }
 
         #endregion

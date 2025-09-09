@@ -14,11 +14,11 @@ namespace QuickFix
         private readonly IMessageFactory _msgFactory;
 
         private readonly object sync_ = new object();
-        private readonly Dictionary<SessionID, Session> sessions_ = new Dictionary<SessionID, Session>();
-        private readonly HashSet<SessionID> sessionIDs_ = new HashSet<SessionID>();
-        private readonly HashSet<SessionID> pending_ = new HashSet<SessionID>();
-        private readonly HashSet<SessionID> connected_ = new HashSet<SessionID>();
-        private readonly HashSet<SessionID> disconnected_ = new HashSet<SessionID>();
+        private readonly Dictionary<SessionID, Session> sessions_ = [];
+        private readonly HashSet<SessionID> sessionIDs_ = [];
+        private readonly HashSet<SessionID> pending_ = [];
+        private readonly HashSet<SessionID> connected_ = [];
+        private readonly HashSet<SessionID> disconnected_ = [];
         private bool isStopped_ = true;
         private Thread thread_;
         private SessionFactory sessionFactory_;
@@ -56,8 +56,7 @@ namespace QuickFix
 
         public void Start()
         {
-            if (_disposed)
-                throw new System.ObjectDisposedException(this.GetType().Name);
+            ObjectDisposedException.ThrowIf(_disposed, this);
 
             // create all sessions
             sessionFactory_ = new SessionFactory(_app, _storeFactory, _logFactory, _msgFactory);
@@ -138,18 +137,23 @@ namespace QuickFix
                     session = sessions_[sessionID];
                     if (session.IsLoggedOn && !terminateActiveSession)
                         return false;
+
                     sessions_.Remove(sessionID);
                     disconnectRequired = IsConnected(sessionID) || IsPending(sessionID);
                     if (disconnectRequired)
                         SetDisconnected(sessionID);
+
                     disconnected_.Remove(sessionID);
                     sessionIDs_.Remove(sessionID);
                 }
             }
+
             lock (_settings)
                 _settings.Remove(sessionID);
+
             if (disconnectRequired)
                 session.Disconnect("Dynamic session removal");
+
             OnRemove(sessionID); // ensure session's reader thread is gone before we dispose session
             session?.Dispose();
             return true;
@@ -169,13 +173,12 @@ namespace QuickFix
         /// <param name="force">If true, terminate immediately.  </param>
         public void Stop(bool force)
         {
-            if (_disposed)
-                throw new System.ObjectDisposedException(this.GetType().Name);
+            ObjectDisposedException.ThrowIf(_disposed, this);
 
             if (IsStopped)
                 return;
 
-            List<Session> enabledSessions = new List<Session>();
+            List<Session> enabledSessions = [];
 
             lock (sync_)
             {
@@ -199,7 +202,7 @@ namespace QuickFix
 
             lock (sync_)
             {
-                HashSet<SessionID> connectedSessionIDs = new HashSet<SessionID>(connected_);
+                HashSet<SessionID> connectedSessionIDs = [.. connected_];
                 foreach (SessionID sessionID in connectedSessionIDs)
                     SetDisconnected(Session.LookupSession(sessionID).SessionID);
             }
@@ -234,7 +237,8 @@ namespace QuickFix
                     foreach (SessionID sessionID in connected_)
                     {
                         Session session = Session.LookupSession(sessionID);
-                        return session != null && session.IsLoggedOn;
+                        if (session?.IsLoggedOn == true)
+                            return true;
                     }
                 }
 
@@ -280,9 +284,9 @@ namespace QuickFix
         /// <summary>
         /// Implemented to connect a session to its target.
         /// </summary>
-        /// <param name="sessionID"></param>
+        /// <param name="session"></param>
         /// <param name="settings"></param>
-        protected abstract void DoConnect(SessionID sessionID, QuickFix.Dictionary settings);
+        protected abstract void DoConnect(Session session, QuickFix.Dictionary settings);
 
         #endregion
 
@@ -292,16 +296,17 @@ namespace QuickFix
         {
             lock (sync_)
             {
-                HashSet<SessionID> disconnectedSessions = new HashSet<SessionID>(disconnected_);
+                HashSet<SessionID> disconnectedSessions = [.. disconnected_];
                 foreach (SessionID sessionID in disconnectedSessions)
                 {
                     Session session = Session.LookupSession(sessionID);
-                    if (session.IsEnabled)
+                    if (session?.IsEnabled == true)
                     {
                         if (session.IsNewSession)
                             session.Reset("New session");
+
                         if (session.IsSessionTime)
-                            DoConnect(sessionID, _settings.Get(sessionID));
+                            DoConnect(session, _settings.Get(sessionID));
                     }
                 }
             }
@@ -340,7 +345,7 @@ namespace QuickFix
             }
         }
 
-        protected bool IsPending(SessionID sessionID)
+        public bool IsPending(SessionID sessionID)
         {
             lock (sync_)
             {
@@ -348,7 +353,7 @@ namespace QuickFix
             }
         }
 
-        protected bool IsConnected(SessionID sessionID)
+        public bool IsConnected(SessionID sessionID)
         {
             lock (sync_)
             {
@@ -356,7 +361,7 @@ namespace QuickFix
             }
         }
 
-        protected bool IsDisconnected(SessionID sessionID)
+        public bool IsDisconnected(SessionID sessionID)
         {
             lock (sync_)
             {

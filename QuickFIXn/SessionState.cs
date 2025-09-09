@@ -413,15 +413,15 @@ namespace QuickFix
             GC.SuppressFinalize(this);
         }
 
-        private bool _disposed;
+        private volatile bool _disposed;
         protected virtual void Dispose(bool disposing)
         {
-            if (_disposed) return;
+            if (_disposed)
+                return;
+
             if (disposing)
-            {
-                log_?.Dispose();
                 MessageStore?.Dispose();
-            }
+
             _disposed = true;
         }
     }

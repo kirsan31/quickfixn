@@ -37,7 +37,7 @@ namespace QuickFix
         public bool IsInitiator { get { return state_.IsInitiator; } }
         public bool IsAcceptor { get { return !state_.IsInitiator; } }
         public bool IsEnabled { get { return state_.IsEnabled; } }
-        public bool IsSessionTime { get { return schedule_.IsSessionTime(System.DateTime.UtcNow); } }
+        public bool IsSessionTime => schedule_.NonStopSession || schedule_.IsSessionTime(DateTime.UtcNow);
         public bool IsLoggedOn { get { return ReceivedLogon && SentLogon; } }
         public bool SentLogon { get { return state_.SentLogon; } }
         public bool ReceivedLogon { get { return state_.ReceivedLogon; } }
@@ -50,6 +50,11 @@ namespace QuickFix
                     || this.schedule_.IsNewSession(creationTime.Value, DateTime.UtcNow);
             }
         }
+
+        /// <summary>
+        /// <see cref="Environment.TickCount64"/> of last connect attempt.
+        /// </summary>
+        public long LastConnectAttemptTicks { get; internal set; }
 
 
         /// <summary>
@@ -1628,10 +1633,9 @@ namespace QuickFix
             return false;
         }
 
-        private bool IsAdminMessage(Message msg)
+        private static bool IsAdminMessage(Message msg)
         {
-            var msgType = msg.Header.GetString(Fields.Tags.MsgType);
-            return AdminMsgTypes.Contains(msgType);
+            return AdminMsgTypes.Contains(msg.Header.GetString(Tags.MsgType));
         }
 
         protected bool SendRaw(Message message, SeqNumType seqNum)
@@ -1683,11 +1687,12 @@ namespace QuickFix
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-
-        private bool disposed_;
+        
         protected virtual void Dispose(bool disposing)
         {
-            if (disposed_) return;
+            if (disposed_)
+                return;
+
             if (disposing)
             {
                 state_?.Dispose();
@@ -1696,12 +1701,11 @@ namespace QuickFix
                     sessions_.Remove(this.SessionID);
                 }
             }
+
             disposed_ = true;
         }
 
-        public bool Disposed
-        {
-            get { return disposed_; }
-        }
+        private volatile bool disposed_;
+        public bool Disposed => disposed_;
     }
 }

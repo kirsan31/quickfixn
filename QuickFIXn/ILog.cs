@@ -1,11 +1,9 @@
-﻿using System;
-
-namespace QuickFix
+﻿namespace QuickFix
 {
     /// <summary>
     /// Session log for messages and events
     /// </summary>
-    public interface ILog : IDisposable
+    public interface ILog
     {
         /// <summary>
         /// Clears the log and removes any persistent log data
@@ -25,10 +23,16 @@ namespace QuickFix
         void OnOutgoing(string msg);
 
         /// <summary>
-        /// Logs a session event
+        /// Logs a session event.
         /// </summary>
         /// <param name="s">event description</param>
         void OnEvent(string s);
+
+        /// <summary>
+        /// Logs an error session event.
+        /// </summary>
+        /// <param name="s">event description</param>
+        void OnErrorEvent(string s);
 
         /// <summary>
         /// Path to logs if applicable.

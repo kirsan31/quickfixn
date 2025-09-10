@@ -31,7 +31,7 @@ namespace QuickFix
         private State state_ = State.RUNNING;
         private long nextClientId_;
         private Thread serverThread_;
-        private Dictionary<long, ClientHandlerThread> clientThreads_ = new Dictionary<long, ClientHandlerThread>();
+        private readonly Dictionary<long, ClientHandlerThread> clientThreads_ = [];
         private TcpListener tcpListener_;
         private SocketSettings socketSettings_;
         private QuickFix.Dictionary sessionDict_;
@@ -211,8 +211,9 @@ namespace QuickFix
                         }
                         catch (System.Exception e)
                         {
-                            t.Log("Error shutting down: " + e.Message);
+                            t.Log("Error shutting down: " + e.Message, true);
                         }
+
                         t.Dispose();
                     }
                     clientThreads_.Clear();

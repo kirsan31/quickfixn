@@ -29,6 +29,13 @@
         void OnEvent(string s);
 
         /// <summary>
+        /// Logs a session event.
+        /// </summary>
+        /// <param name="s">Event description</param>
+        /// <param name="error">If set to <see langword="true" /> - error.</param>
+        void OnEvent(string s, bool error);
+
+        /// <summary>
         /// Logs an error session event.
         /// </summary>
         /// <param name="s">event description</param>

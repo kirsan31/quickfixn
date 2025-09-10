@@ -130,13 +130,13 @@ namespace QuickFix
                     qfSession_ = Session.LookupSession(Message.GetReverseSessionID(msg));
                     if (null == qfSession_)
                     {
-                        this.Log("ERROR: Disconnecting; received message for unknown session: " + msg);
+                        this.LogError("ERROR: Disconnecting; received message for unknown session: " + msg);
                         DisconnectClient();
                         return;
                     }
                     else if(IsAssumedSession(qfSession_.SessionID))
                     {
-                        this.Log("ERROR: Disconnecting; received message for unknown session: " + msg);
+                        this.LogError("ERROR: Disconnecting; received message for unknown session: " + msg);
                         qfSession_ = null;
                         DisconnectClient();
                         return;
@@ -154,7 +154,7 @@ namespace QuickFix
                 }
                 catch (System.Exception e)
                 {
-                    this.Log("Error on Session '" + qfSession_.SessionID + "': " + e.ToString());
+                    this.LogError("Error on Session '" + qfSession_.SessionID + "': " + e.ToString());
                 }
             }
             catch (InvalidMessage e)
@@ -173,12 +173,12 @@ namespace QuickFix
             {
                 if (Fields.MsgType.LOGON.Equals(Message.GetMsgType(msg)))
                 {
-                    this.Log("ERROR: Invalid LOGON message, disconnecting: " + e.Message);
+                    this.LogError("ERROR: Invalid LOGON message, disconnecting: " + e.Message);
                     DisconnectClient();
                 }
                 else
                 {
-                    this.Log("ERROR: Invalid message: " + e.Message);
+                    this.LogError("ERROR: Invalid message: " + e.Message);
                 }
             }
             catch (InvalidMessage)
@@ -191,10 +191,10 @@ namespace QuickFix
             {
                 return parser_.ReadFixMessage(out msg);
             }
-            catch (MessageParseError e)
+            catch (MessageParseError)
             {
-                msg = "";
-                throw e;
+                msg = string.Empty;
+                throw;
             }
         }
 
@@ -216,7 +216,7 @@ namespace QuickFix
             if (qfSession_.HasResponder)
             {
                 qfSession_.Log.OnIncoming(msg);
-                qfSession_.Log.OnEvent("Multiple logons/connections for this session are not allowed (" + tcpClient_.Client.RemoteEndPoint + ")");
+                qfSession_.Log.OnErrorEvent("Multiple logons/connections for this session are not allowed (" + tcpClient_.Client.RemoteEndPoint + ")");
                 qfSession_ = null;
                 DisconnectClient();
                 return false;
@@ -286,24 +286,20 @@ namespace QuickFix
                 disconnectNeeded = false;
             }
 
-            this.Log("SocketReader Error: " + reason);
+            this.LogError("SocketReader Error: " + reason);
 
             if (disconnectNeeded)
             {
-                if (null != quickFixSession && quickFixSession.HasResponder)
-                    quickFixSession.Disconnect(reason);
+                if (quickFixSession?.HasResponder == true)
+                    quickFixSession.Disconnect(reason, true);
                 else
                     DisconnectClient();
             }
         }
 
-        /// <summary>
-        /// FIXME do proper logging
-        /// </summary>
-        /// <param name="s"></param>
-        private void Log(string s)
+        private void LogError(string s)
         {
-            responder_.Log(s);
+            responder_.Log(s, true);
         }
 
         public int Send(string data)

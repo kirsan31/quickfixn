@@ -267,7 +267,7 @@ namespace QuickFix.Transport
                 }
                 catch (System.Security.Authentication.AuthenticationException ex)
                 {
-                    log_.OnEvent("Unable to perform authentication against server: " + ex.Message);
+                    log_.OnErrorEvent("Unable to perform authentication against server: " + ex.Message);
                     throw;
                 }
 
@@ -297,7 +297,7 @@ namespace QuickFix.Transport
                 }
                 catch (System.Security.Authentication.AuthenticationException ex)
                 {
-                    log_.OnEvent("Unable to perform authentication against server: " + ex.Message);
+                    log_.OnErrorEvent("Unable to perform authentication against server: " + ex.Message);
                     throw;
                 }
 
@@ -363,14 +363,14 @@ namespace QuickFix.Transport
                 if (!ContainsEnhancedKeyUsage(certificate, enhancedKeyUsage))
                 {
                     if (enhancedKeyUsage == clientAuthenticationOid)
-                        log_.OnEvent("Remote certificate is not intended for client authentication: It is missing enhanced key usage " + enhancedKeyUsage);
+                        log_.OnErrorEvent("Remote certificate is not intended for client authentication: It is missing enhanced key usage " + enhancedKeyUsage);
                     else
-                        log_.OnEvent("Remote certificate is not intended for server authentication: It is missing enhanced key usage " + enhancedKeyUsage);
+                        log_.OnErrorEvent("Remote certificate is not intended for server authentication: It is missing enhanced key usage " + enhancedKeyUsage);
 
                     return false;
                 }
 
-                // If CA Certficiate is specifed then validate agains the CA certificate, otherwise it is validated against the installed certificates
+                // If CA Certificate is specified then validate against the CA certificate, otherwise it is validated against the installed certificates
                 if (!string.IsNullOrEmpty(socketSettings_.CACertificatePath))
                 {
                     X509Chain chain0 = new X509Chain();
@@ -392,7 +392,7 @@ namespace QuickFix.Transport
                 // Any basic authentication check failed, do after checking CA
                 if (sslPolicyErrors != SslPolicyErrors.None)
                 {
-                    log_.OnEvent("Remote certificate was not recognized as a valid certificate: " + sslPolicyErrors);
+                    log_.OnErrorEvent("Remote certificate was not recognized as a valid certificate: " + sslPolicyErrors);
                     return false;
                 }
 
@@ -401,11 +401,11 @@ namespace QuickFix.Transport
             }
 
             /// <summary>
-            /// Check if the given certificate contains the given enhanced key usage Oid
+            /// Check if the given certificate contains the given enhanced key usage Old
             /// </summary>
             /// <param name="certificate">X509 certificate</param>
-            /// <param name="enhancedKeyOid">the oid to check if it is specified</param>
-            /// <returns><c>true</c> if the oid is specified as an enhanced key usage; otherwise <c>false</c></returns>
+            /// <param name="enhancedKeyOid">the old to check if it is specified</param>
+            /// <returns><c>true</c> if the old is specified as an enhanced key usage; otherwise <c>false</c></returns>
             private static bool ContainsEnhancedKeyUsage(X509Certificate certificate, string enhancedKeyOid)
             {
                 X509Certificate2 cert2 = certificate as X509Certificate2;

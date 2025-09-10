@@ -20,7 +20,10 @@ namespace QuickFix
         public void OnEvent(string s)
         { }
 
-        public void Dispose()
+        public void OnEvent(string s, bool error)
+        { }
+
+        public void OnErrorEvent(string s)
         { }
 
         #endregion

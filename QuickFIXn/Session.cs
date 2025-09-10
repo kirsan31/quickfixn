@@ -316,13 +316,11 @@ namespace QuickFix
         /// <returns>the Session if found, else returns null</returns>
         public static Session LookupSession(SessionID sessionID)
         {
-            Session result;
             lock (sessions_)
             {
-                if (!sessions_.TryGetValue(sessionID, out result))
-                    result = null;
-            }
-            return result;
+                sessions_.TryGetValue(sessionID, out Session result);
+                return result;
+            }            
         }
 
         /// <summary>
@@ -407,7 +405,7 @@ namespace QuickFix
         /// </summary>
         public void Logout()
         {
-            Logout("");
+            Logout(string.Empty);
         }
 
         // TODO for v2 - rename, make internal
@@ -423,20 +421,21 @@ namespace QuickFix
         /// <summary>
         /// Logs out from session and closes the network connection
         /// </summary>
-        /// <param name="reason"></param>
-        public void Disconnect(string reason)
+        /// <param name="reason">The reason.</param>
+        /// <param name="error">If set to <see langword="true" /> - error.</param>
+        public void Disconnect(string reason, bool error = false)
         {
             lock (sync_)
             {
-                if (null != responder_)
+                if (responder_ is not null)
                 {
-                    this.Log.OnEvent("Session " + this.SessionID + " disconnecting: " + reason);
+                    this.Log.OnEvent("Session " + this.SessionID + " disconnecting: " + reason, error);
                     responder_.Disconnect();
                     responder_ = null;
                 }
                 else
                 {
-                    this.Log.OnEvent("Session " + this.SessionID + " already disconnected: " + reason);
+                    this.Log.OnEvent("Session " + this.SessionID + " already disconnected: " + reason, error);
                 }
 
                 if (state_.ReceivedLogon || state_.SentLogon)
@@ -450,9 +449,10 @@ namespace QuickFix
                 state_.ReceivedReset = false;
                 state_.SentReset = false;
                 state_.ClearQueue();
-                state_.LogoutReason = "";
+                state_.LogoutReason = string.Empty;
                 if (this.ResetOnDisconnect)
                     state_.Reset("ResetOnDisconnect");
+
                 state_.SetResendRange(0, 0);
             }
         }
@@ -472,6 +472,7 @@ namespace QuickFix
                     Reset("Out of SessionTime (Session.Next())");
                 else
                     Reset("Out of SessionTime (Session.Next())", "Message received outside of session time");
+
                 return;
             }
 
@@ -497,13 +498,14 @@ namespace QuickFix
                     if (GenerateLogon())
                         this.Log.OnEvent("Initiated logon request");
                     else
-                        this.Log.OnEvent("Error during logon request initiation");
+                        this.Log.OnErrorEvent("Error during logon request initiation");
 
                 }
                 else if (state_.SentLogon && state_.LogonTimedOut())
                 {
-                    Disconnect("Timed out waiting for logon response");
+                    Disconnect("Timed out waiting for logon response", true);
                 }
+                
                 return;
             }
 
@@ -512,7 +514,7 @@ namespace QuickFix
 
 
             if (state_.LogoutTimedOut())
-                Disconnect("Timed out waiting for logout response");
+                Disconnect("Timed out waiting for logout response", true);
 
 
             if (state_.WithinHeartbeat())
@@ -522,7 +524,8 @@ namespace QuickFix
             {
                 if (this.SendLogoutBeforeTimeoutDisconnect)
                     GenerateLogout();
-                Disconnect("Timed out waiting for heartbeat");
+
+                Disconnect("Timed out waiting for heartbeat", true);
             }
             else
             {
@@ -628,7 +631,7 @@ namespace QuickFix
                 else if (MsgType.LOGOUT.Equals(msgType))
                     NextLogout(message);
                 else if (!IsLoggedOn)
-                    Disconnect(string.Format("Received msg type '{0}' when not logged on", msgType));
+                    Disconnect(string.Format("Received msg type '{0}' when not logged on", msgType), true);
                 else if (MsgType.HEARTBEAT.Equals(msgType))
                     NextHeartbeat(message);
                 else if (MsgType.TEST_REQUEST.Equals(msgType))
@@ -647,22 +650,23 @@ namespace QuickFix
             }
             catch (InvalidMessage e)
             {
-                this.Log.OnEvent(e.Message);
+                this.Log.OnErrorEvent(e.Message);
 
                 try
                 {
                     if (MsgType.LOGON.Equals(msgBuilder.MsgType.Obj))
-                        Disconnect("Logon message is not valid");
+                        Disconnect("Logon message is not valid", true);
                 }
                 catch (MessageParseError)
                 { }
 
-                throw e;
+                throw;
             }
             catch (TagException e)
             {
-                if (null != e.InnerException)
-                    this.Log.OnEvent(e.InnerException.Message);
+                if (e.InnerException is not null)
+                    this.Log.OnErrorEvent(e.InnerException.Message);
+
                 GenerateReject(msgBuilder, e.sessionRejectReason, e.Field);
             }
             catch (UnsupportedVersion uvx)
@@ -673,19 +677,19 @@ namespace QuickFix
                 }
                 else
                 {
-                    this.Log.OnEvent(uvx.ToString());
+                    this.Log.OnErrorEvent(uvx.ToString());
                     GenerateLogout(uvx.Message);
                     state_.IncrNextTargetMsgSeqNum();
                 }
             }
             catch (UnsupportedMessageType e)
             {
-                this.Log.OnEvent("Unsupported message type: " + e.Message);
+                this.Log.OnErrorEvent("Unsupported message type: " + e.Message);
                 GenerateBusinessMessageReject(message, Fields.BusinessRejectReason.UNKNOWN_MESSAGE_TYPE, 0);
             }
             catch (FieldNotFoundException e)
             {
-                this.Log.OnEvent("Rejecting invalid message, field not found: " + e.Message);
+                this.Log.OnErrorEvent("Rejecting invalid message, field not found: " + e.Message);
                 if ((string.CompareOrdinal(SessionID.BeginString, FixValues.BeginString.FIX42) >= 0) && (message.IsApp()))
                 {
                     GenerateBusinessMessageReject(message, Fields.BusinessRejectReason.CONDITIONALLY_REQUIRED_FIELD_MISSING, e.Field);
@@ -694,17 +698,19 @@ namespace QuickFix
                 {
                     if (MsgType.LOGON.Equals(msgBuilder.MsgType.Obj))
                     {
-                        this.Log.OnEvent("Required field missing from logon");
-                        Disconnect("Required field missing from logon");
+                        this.Log.OnErrorEvent("Required field missing from logon");
+                        Disconnect("Required field missing from logon", true);
                     }
                     else
+                    {
                         GenerateReject(msgBuilder, new QuickFix.FixValues.SessionRejectReason(SessionRejectReason.REQUIRED_TAG_MISSING, "Required Tag Missing"), e.Field);
+                    }
                 }
             }
             catch (RejectLogon e)
             {
                 GenerateLogout(e.Message);
-                Disconnect(e.ToString());
+                Disconnect(e.ToString(), true);
             }
 
             Next();
@@ -736,8 +742,8 @@ namespace QuickFix
 
             if (!IsGoodTime(logon))
             {
-                this.Log.OnEvent("Logon has bad sending time");
-                Disconnect("bad sending time");
+                this.Log.OnErrorEvent("Logon has bad sending time");
+                Disconnect("bad sending time", true);
                 return;
             }
 
@@ -875,7 +881,7 @@ namespace QuickFix
             }
             catch (System.Exception e)
             {
-                this.Log.OnEvent("ERROR during resend request " + e.Message);
+                this.Log.OnErrorEvent("ERROR during resend request " + e.Message);
             }
         }
         private bool ResendApproved(Message msg, SessionID sessionID)
@@ -915,6 +921,7 @@ namespace QuickFix
             state_.IncrNextTargetMsgSeqNum();
             if (this.ResetOnLogout)
                 state_.Reset("ResetOnLogout");
+
             Disconnect(disconnectReason);
         }
 
@@ -1006,7 +1013,7 @@ namespace QuickFix
 
                 if (!IsGoodTime(msg))
                 {
-                    this.Log.OnEvent("Sending time accuracy problem");
+                    this.Log.OnErrorEvent("Sending time accuracy problem");
                     GenerateReject(msg, FixValues.SessionRejectReason.SENDING_TIME_ACCURACY_PROBLEM);
                     GenerateLogout();
                     return false;
@@ -1014,8 +1021,8 @@ namespace QuickFix
             }
             catch (System.Exception e)
             {
-                this.Log.OnEvent("Verify failed: " + e.Message);
-                Disconnect("Verify failed: " + e.Message);
+                this.Log.OnErrorEvent("Verify failed: " + e.Message);
+                Disconnect("Verify failed: " + e.Message, true);
                 return false;
             }
 
@@ -1064,6 +1071,7 @@ namespace QuickFix
         {
             if(this.IsLoggedOn)
                 GenerateLogout(logoutMessage);
+
             Disconnect("Resetting...");
             state_.Reset(loggedReason);
         }
@@ -1113,13 +1121,12 @@ namespace QuickFix
         {
             string beginString = msg.Header.GetString(Fields.Tags.BeginString);
 
-            this.Log.OnEvent("MsgSeqNum too high, expecting " + state_.NextTargetMsgSeqNum + " but received " + msgSeqNum);
+            this.Log.OnErrorEvent("MsgSeqNum too high, expecting " + state_.NextTargetMsgSeqNum + " but received " + msgSeqNum);
             state_.Queue(msgSeqNum, msg);
 
             if (state_.ResendRequested())
             {
                 ResendRange range = state_.GetResendRange();
-
                 if (!this.SendRedundantResendRequests && msgSeqNum >= range.BeginSeqNo)
                 {
                     this.Log.OnEvent("Already sent ResendRequest FROM: " + range.BeginSeqNo + " TO: " + range.EndSeqNo + ".  Not sending another.");
@@ -1202,7 +1209,7 @@ namespace QuickFix
 
 
             reject.SetField(new Text(reason));
-            Log.OnEvent("Reject sent for Message: " + msgSeqNum + " Reason:" + reason);
+            Log.OnErrorEvent("Reject sent for Message: " + msgSeqNum + " Reason:" + reason);
             SendRaw(reject, 0);
         }
 
@@ -1221,7 +1228,7 @@ namespace QuickFix
             }
             else
             {
-                this.Log.OnEvent("Error sending ResendRequest (" + startSeqNum + " ," + endSeqNum + ")");
+                this.Log.OnErrorEvent("Error sending ResendRequest (" + startSeqNum + " ," + endSeqNum + ")");
                 return false;
             }
         }
@@ -1357,7 +1364,7 @@ namespace QuickFix
                 }
                 catch (FieldNotFoundException)
                 {
-                    this.Log.OnEvent("Error: No message sequence number: " + other);
+                    this.Log.OnErrorEvent("Error: No message sequence number: " + other);
                 }
             }
             state_.SentLogout = SendRaw(logout, 0);
@@ -1457,14 +1464,16 @@ namespace QuickFix
                         PopulateSessionRejectReason(reject, field, reason.Description, false);
                 }
                 else
+                {
                     PopulateSessionRejectReason(reject, field, reason.Description, true);
+                }
 
-                this.Log.OnEvent("Message " + msgSeqNum + " Rejected: " + reason.Description + " (Field=" + field + ")");
+                this.Log.OnErrorEvent("Message " + msgSeqNum + " Rejected: " + reason.Description + " (Field=" + field + ")");
             }
             else
             {
                 PopulateRejectReason(reject, reason.Description);
-                this.Log.OnEvent("Message " + msgSeqNum + " Rejected: " + reason.Value);
+                this.Log.OnErrorEvent("Message " + msgSeqNum + " Rejected: " + reason.Value);
             }
 
             if (!state_.ReceivedLogon)
@@ -1586,9 +1595,10 @@ namespace QuickFix
                 }
                 catch (FieldNotFoundException)
                 {
-                    this.Log.OnEvent("Error: Received message without MsgSeqNum: " + receivedMessage);
+                    this.Log.OnErrorEvent("Error: Received message without MsgSeqNum: " + receivedMessage);
                 }
             }
+
             SendRaw(sequenceReset, beginSeqNo);
             this.Log.OnEvent("Sent SequenceReset TO: " + newSeqNo);
         }

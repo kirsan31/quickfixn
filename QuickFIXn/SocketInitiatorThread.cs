@@ -83,6 +83,7 @@ namespace QuickFix
                 int bytesRead = ReadSome(readBuffer_, 1000);
                 if (bytesRead > 0)
                     parser_.AddToStream(readBuffer_, bytesRead);
+
                 else if (null != session_)
                 {
                     session_.Next();
@@ -101,20 +102,22 @@ namespace QuickFix
                 if (isDisconnectRequested_ == false)
                 {
                     // for lack of a better idea, do what the general exception does
-                    if (null != session_)
-                        session_.Disconnect(e.ToString());
+                    if (session_ is not null)
+                        session_.Disconnect(e.ToString(), true);
                     else
                         Disconnect();
                 }
+
                 return false;                    
             }
             catch (System.Exception e)
             {
-                if (null != session_)
-                    session_.Disconnect(e.ToString());
+                if (session_ is not null)
+                    session_.Disconnect(e.ToString(), true);
                 else
                     Disconnect();
             }
+
             return false;
         }
 

@@ -55,18 +55,10 @@ namespace QuickFix
                 System.Console.WriteLine("<event> " + s);
             }
         }
-        #endregion
 
-        #region IDisposable implementation
-        public void Dispose()
-        {
-            Dispose(true);
-            System.GC.SuppressFinalize(this);
-        }
-        protected virtual void Dispose(bool disposing)
-        {
-            // Nothing to dispose of...
-        }
+        public void OnEvent(string s, bool error) => OnEvent(s);
+
+        public void OnErrorEvent(string s) => OnEvent(s);
         #endregion
     }
 }

@@ -68,8 +68,7 @@ namespace QuickFix
 
         private void DisposedCheck()
         {
-            if (_disposed)
-                throw new System.ObjectDisposedException(this.GetType().Name);
+            ObjectDisposedException.ThrowIf(_disposed, this);
         }
 
         #region Log Members
@@ -123,6 +122,9 @@ namespace QuickFix
             }
         }
 
+        public void OnEvent(string s, bool error) => OnEvent(s);
+        public void OnErrorEvent(string s) => OnEvent(s);
+
         #endregion
 
         #region IDisposable Members
@@ -149,6 +151,7 @@ namespace QuickFix
 
             _disposed = true;
         }
+
         #endregion
     }
 }

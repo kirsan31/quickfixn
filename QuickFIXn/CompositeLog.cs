@@ -44,5 +44,11 @@ namespace QuickFix
             foreach (var log in logs_)
                 log.OnErrorEvent(s);
         }
+
+        public void OnEvent(string s, bool error)
+        {
+            foreach (var log in logs_)
+                log.OnEvent(s, error);
+        }
     }
 }

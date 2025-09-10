@@ -108,10 +108,9 @@ namespace QuickFix
             Exited?.Invoke(this, new ExitedEventArgs(this));
         }
 
-        /// FIXME do real logging
-        public void Log(string s)
+        public void Log(string s, bool error = false)
         {
-            log_.OnEvent(s);
+            log_.OnEvent(s, error);
         }
 
         /// <summary>

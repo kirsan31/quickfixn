@@ -186,8 +186,7 @@ namespace QuickFix
                 }
                 catch (System.Exception e)
                 {
-                    // FIXME logError(session.getSessionID(), "Error during logout", e);
-                    System.Console.WriteLine("Error during logout of Session " + session.SessionID + ": " + e.Message);
+                    session.Log.OnErrorEvent("Error during logout of Session " + session.SessionID + ": " + e.Message);
                 }
             }
 
@@ -202,8 +201,7 @@ namespace QuickFix
                     }
                     catch (System.Exception e)
                     {
-                        // FIXME logError(session.getSessionID(), "Error during disconnect", e);
-                        System.Console.WriteLine("Error during disconnect of Session " + session.SessionID + ": " + e.Message);
+                        session.Log.OnErrorEvent("Error during disconnect of Session " + session.SessionID + ": " + e.Message);
                     }
                 }
             }

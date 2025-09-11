@@ -15,11 +15,10 @@ namespace QuickFix
 
         private readonly object sync_ = new object();
         private readonly Dictionary<SessionID, Session> sessions_ = [];
-        private readonly HashSet<SessionID> sessionIDs_ = [];
         private readonly HashSet<SessionID> pending_ = [];
         private readonly HashSet<SessionID> connected_ = [];
         private readonly HashSet<SessionID> disconnected_ = [];
-        private bool isStopped_ = true;
+        private volatile bool isStopped_ = true;
         private Thread thread_;
         private SessionFactory sessionFactory_;
 
@@ -66,8 +65,11 @@ namespace QuickFix
                 CreateSession(sessionID, dict);
             }
 
-            if (0 == sessions_.Count)
-                throw new ConfigError("No sessions defined for initiator");
+            lock (sync_)
+            {
+                if (sessions_.Count == 0)
+                    throw new ConfigError("No sessions defined for initiator");
+            }
 
             // start it up
             isStopped_ = false;
@@ -95,6 +97,7 @@ namespace QuickFix
 
             lock (_settings) // failed to create new session
                 _settings.Remove(sessionID);
+
             return false;
         }
 
@@ -106,18 +109,19 @@ namespace QuickFix
         /// <returns>true if session added successfully, false if session already exists or is not an initiator</returns>
         private bool CreateSession(SessionID sessionID, Dictionary dict)
         {
-            if (dict.GetString(SessionSettings.CONNECTION_TYPE) == "initiator" && !sessionIDs_.Contains(sessionID))
+            if (dict.GetString(SessionSettings.CONNECTION_TYPE) != "initiator")
+                return false;
+
+            lock (sync_)
             {
-                Session session = sessionFactory_.Create(sessionID, dict);
-                lock (sync_)
-                {
-                    sessionIDs_.Add(sessionID);
-                    sessions_[sessionID] = session;
-                    SetDisconnected(sessionID);
-                }
-                return true;
+                if (sessions_.ContainsKey(sessionID))
+                    return false;
+
+                sessions_[sessionID] = sessionFactory_.Create(sessionID, dict);
+                SetDisconnected(sessionID);
             }
-            return false;
+
+            return true;
         }
 
         /// <summary>
@@ -132,19 +136,19 @@ namespace QuickFix
             bool disconnectRequired = false;
             lock (sync_)
             {
-                if (sessionIDs_.Contains(sessionID))
+                if (sessions_.TryGetValue(sessionID, out session))
                 {
-                    session = sessions_[sessionID];
                     if (session.IsLoggedOn && !terminateActiveSession)
                         return false;
 
-                    sessions_.Remove(sessionID);
-                    disconnectRequired = IsConnected(sessionID) || IsPending(sessionID);
-                    if (disconnectRequired)
-                        SetDisconnected(sessionID);
+                    if (pending_.Remove(sessionID))
+                        disconnectRequired = true;
+
+                    if (connected_.Remove(sessionID))
+                        disconnectRequired = true;
 
                     disconnected_.Remove(sessionID);
-                    sessionIDs_.Remove(sessionID);
+                    sessions_.Remove(sessionID);
                 }
             }
 
@@ -178,18 +182,12 @@ namespace QuickFix
             if (IsStopped)
                 return;
 
-            List<Session> enabledSessions = [];
-
             lock (sync_)
             {
                 foreach (SessionID sessionID in connected_)
                 {
-                    Session session = Session.LookupSession(sessionID);
-                    if (session.IsEnabled)
-                    {
-                        enabledSessions.Add(session);
-                        session.Logout();
-                    }
+                    if (sessions_.TryGetValue(sessionID, out Session session) && session.IsEnabled)
+                        session.Disable();
                 }
             }
 
@@ -204,7 +202,7 @@ namespace QuickFix
             {
                 HashSet<SessionID> connectedSessionIDs = [.. connected_];
                 foreach (SessionID sessionID in connectedSessionIDs)
-                    SetDisconnected(Session.LookupSession(sessionID).SessionID);
+                    SetDisconnected(sessionID);
             }
 
             isStopped_ = true;
@@ -221,7 +219,6 @@ namespace QuickFix
                     s.Dispose();
 
                 sessions_.Clear();
-                sessionIDs_.Clear();
                 pending_.Clear();
                 connected_.Clear();
                 disconnected_.Clear();
@@ -236,8 +233,7 @@ namespace QuickFix
                 {
                     foreach (SessionID sessionID in connected_)
                     {
-                        Session session = Session.LookupSession(sessionID);
-                        if (session?.IsLoggedOn == true)
+                        if (sessions_.TryGetValue(sessionID, out Session session) && session.IsLoggedOn)
                             return true;
                     }
                 }
@@ -299,8 +295,7 @@ namespace QuickFix
                 HashSet<SessionID> disconnectedSessions = [.. disconnected_];
                 foreach (SessionID sessionID in disconnectedSessions)
                 {
-                    Session session = Session.LookupSession(sessionID);
-                    if (session?.IsEnabled == true)
+                    if (sessions_.TryGetValue(sessionID, out Session session) && session.IsEnabled)
                     {
                         if (session.IsNewSession)
                             session.Reset("New session");
@@ -336,16 +331,14 @@ namespace QuickFix
         {
             lock (sync_)
             {
-                if (sessionIDs_.Contains(sessionID))
-                {
-                    pending_.Remove(sessionID);
-                    connected_.Remove(sessionID);
+                pending_.Remove(sessionID);
+                connected_.Remove(sessionID);
+                if (sessions_.ContainsKey(sessionID))
                     disconnected_.Add(sessionID);
-                }
             }
         }
 
-        public bool IsPending(SessionID sessionID)
+        protected bool IsPending(SessionID sessionID)
         {
             lock (sync_)
             {
@@ -353,7 +346,7 @@ namespace QuickFix
             }
         }
 
-        public bool IsConnected(SessionID sessionID)
+        protected bool IsConnected(SessionID sessionID)
         {
             lock (sync_)
             {
@@ -361,7 +354,7 @@ namespace QuickFix
             }
         }
 
-        public bool IsDisconnected(SessionID sessionID)
+        protected bool IsDisconnected(SessionID sessionID)
         {
             lock (sync_)
             {
@@ -378,7 +371,8 @@ namespace QuickFix
         /// <returns>the SessionIDs for the sessions managed by this initiator</returns>
         public HashSet<SessionID> GetSessionIDs()
         {
-            return new HashSet<SessionID>(sessions_.Keys);
+            lock (sync_)
+                return [.. sessions_.Keys];
         }
 
         private bool _disposed;
@@ -390,11 +384,12 @@ namespace QuickFix
         /// <param name="disposing"></param>
         protected virtual void Dispose(bool disposing)
         {
-            if (_disposed) return;
+            if (_disposed)
+                return;
+
             if (disposing)
-            {
                 this.Stop();
-            }
+
             _disposed = true;
         }
 

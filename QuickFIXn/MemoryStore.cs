@@ -17,7 +17,7 @@ namespace QuickFix
 
         public MemoryStore()
         {
-            messages_ = new Dictionary<SeqNumType, string>();
+            messages_ = [];
             Reset();
         }
 
@@ -29,8 +29,8 @@ namespace QuickFix
 
             for (SeqNumType current = begSeqNo; current <= endSeqNo; current++)
             {
-                if (msgs.ContainsKey(current))
-                    messages.Add(msgs[current]);
+                if (msgs.TryGetValue(current, out string value))
+                    messages.Add(value);
             }
         }
 

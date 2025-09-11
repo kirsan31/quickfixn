@@ -122,7 +122,7 @@ namespace Acceptor
                     foreach (SessionID session in _sessionSettings.GetSessions())
                     {
                         Session sessionDetails = Session.LookupSession(session);
-                        sessionDetails.Logout();
+                        sessionDetails.Disable();
                     }
                 }
             }
@@ -155,7 +155,7 @@ namespace Acceptor
                     foreach (SessionID session in _sessionSettings.GetSessions())
                     {
                         Session sessionDetails = Session.LookupSession(session);
-                        sessionDetails.Logon();
+                        sessionDetails.Enable();
                     }
                 }
             }
@@ -370,9 +370,9 @@ namespace Acceptor
             if (request.QueryString["enabled"] != null)
             {
                 if (!Convert.ToBoolean(request.QueryString["enabled"]))
-                    sessionDetails.Logout();
+                    sessionDetails.Disable();
                 else
-                    sessionDetails.Logon();
+                    sessionDetails.Enable();
 
                 url = RemoveQueryStringByKey(urlOriginalString, "Enabled");
             }

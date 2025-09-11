@@ -182,7 +182,7 @@ namespace QuickFix
             {
                 try
                 {
-                    session.Logout();
+                    session.Disable();
                 }
                 catch (System.Exception e)
                 {

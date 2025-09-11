@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using QuickFix.Fields;
@@ -18,14 +19,14 @@ namespace QuickFix
     {
         #region Private Members
 
-        private static readonly Dictionary<SessionID, Session> sessions_ = [];
+        private static readonly ConcurrentDictionary<SessionID, Session> s_AllSessions = [];
         private readonly object sync_ = new object();
         private IResponder responder_;
         private readonly SessionSchedule schedule_;
         private readonly SessionState state_;
         private readonly IMessageFactory msgFactory_;
         private readonly bool appDoesEarlyIntercept_;
-        private static readonly HashSet<string> AdminMsgTypes = new HashSet<string>() { "0", "A", "1", "2", "3", "4", "5" };
+        private static readonly HashSet<string> AdminMsgTypes = ["0", "A", "1", "2", "3", "4", "5"];
 
         #endregion
 
@@ -36,6 +37,9 @@ namespace QuickFix
         public ILog Log { get { return state_.Log; } }
         public bool IsInitiator { get { return state_.IsInitiator; } }
         public bool IsAcceptor { get { return !state_.IsInitiator; } }
+        /// <summary>
+        /// Default = <see langword="true"/>.
+        /// </summary>
         public bool IsEnabled { get { return state_.IsEnabled; } }
         public bool IsSessionTime => schedule_.NonStopSession || schedule_.IsSessionTime(DateTime.UtcNow);
         public bool IsLoggedOn { get { return ReceivedLogon && SentLogon; } }
@@ -298,11 +302,7 @@ namespace QuickFix
             else if (IsNewSession)
                 Reset("New session");
 
-            lock (sessions_)
-            {
-                sessions_[this.SessionID] = this;
-            }
-
+            s_AllSessions[this.SessionID] = this;
             this.Application.OnCreate(this.SessionID);
             this.Log.OnEvent("Created session");
         }
@@ -316,11 +316,8 @@ namespace QuickFix
         /// <returns>the Session if found, else returns null</returns>
         public static Session LookupSession(SessionID sessionID)
         {
-            lock (sessions_)
-            {
-                sessions_.TryGetValue(sessionID, out Session result);
-                return result;
-            }            
+            s_AllSessions.TryGetValue(sessionID, out Session result);
+            return result;
         }
 
         /// <summary>
@@ -387,33 +384,20 @@ namespace QuickFix
             }
         }
 
-        // TODO for v2 - rename, make internal
         /// <summary>
-        /// Sets some internal state variables.  Despite the name, it does not do anything to make a logon occur.
+        /// Set <see cref="SessionState.IsEnabled"/> to <see langword="true"/>;
         /// </summary>
-        public void Logon()
+        internal void Enable()
         {
             state_.IsEnabled = true;
-            state_.LogoutReason = "";
         }
 
-        // TODO for v2 - rename, make internal
         /// <summary>
-        /// Sets some internal state variables.  Despite the name, it does not cause a logout to occur.
+        /// Set <see cref="SessionState.IsEnabled"/> to <see langword="false"/>;
         /// </summary>
-        public void Logout()
-        {
-            Logout(string.Empty);
-        }
-
-        // TODO for v2 - rename, make internal
-        /// <summary>
-        /// Sets some internal state variables.  Despite the name, it does not cause a logout to occur.
-        /// </summary>
-        public void Logout(string reason)
+        internal void Disable()
         {
             state_.IsEnabled = false;
-            state_.LogoutReason = reason;
         }
 
         /// <summary>
@@ -447,7 +431,6 @@ namespace QuickFix
                 state_.ReceivedReset = false;
                 state_.SentReset = false;
                 state_.ClearQueue();
-                state_.LogoutReason = string.Empty;
                 if (this.ResetOnDisconnect)
                     state_.Reset("ResetOnDisconnect");
 
@@ -485,7 +468,7 @@ namespace QuickFix
                 if (!state_.SentLogout)
                 {
                     this.Log.OnEvent("Initiated logout request");
-                    GenerateLogout(state_.LogoutReason);
+                    GenerateLogout();
                 }
             }
 
@@ -813,7 +796,7 @@ namespace QuickFix
                         return;
                     }
 
-                    List<string> messages = new List<string>();
+                    List<string> messages = [];
                     state_.Get(begSeqNo, endSeqNo, messages);
                     SeqNumType current = begSeqNo;
                     SeqNumType begin = 0;
@@ -837,7 +820,6 @@ namespace QuickFix
                         }
                         else
                         {
-
                             initializeResendFields(msg);
                             if(!ResendApproved(msg, SessionID)) 
                             {
@@ -848,9 +830,11 @@ namespace QuickFix
                             {
                                 GenerateSequenceReset(resendReq, begin, msgSeqNum);
                             }
+
                             Send(msg.ToString());
                             begin = 0;
                         }
+
                         current = msgSeqNum + 1;
                     }
 
@@ -870,6 +854,7 @@ namespace QuickFix
                         GenerateSequenceReset(resendReq, begin, endSeqNo);
                     }
                 }
+
                 msgSeqNum = resendReq.Header.GetULong(Tags.MsgSeqNum);
                 if (!IsTargetTooHigh(msgSeqNum) && !IsTargetTooLow(msgSeqNum))
                 {
@@ -927,6 +912,7 @@ namespace QuickFix
         {
             if (!Verify(heartbeat))
                 return;
+
             state_.IncrNextTargetMsgSeqNum();
         }
 
@@ -1350,11 +1336,12 @@ namespace QuickFix
         /// <returns></returns>
         private bool GenerateLogout(Message other, string text)
         {
-            Message logout = msgFactory_.Create(this.SessionID.BeginString, Fields.MsgType.LOGOUT);
+            Message logout = msgFactory_.Create(this.SessionID.BeginString, MsgType.LOGOUT);
             InitializeHeader(logout);
-            if (text != null && text.Length > 0)
-                logout.SetField(new Fields.Text(text));
-            if (other != null && this.EnableLastMsgSeqNumProcessed)
+            if (!string.IsNullOrEmpty(text))
+                logout.SetField(new Text(text));
+
+            if (other is not null && this.EnableLastMsgSeqNumProcessed)
             {
                 try
                 {
@@ -1365,6 +1352,7 @@ namespace QuickFix
                     this.Log.OnErrorEvent("Error: No message sequence number: " + other);
                 }
             }
+
             state_.SentLogout = SendRaw(logout, 0);
             return state_.SentLogout;
         }
@@ -1623,7 +1611,7 @@ namespace QuickFix
         {
             Message msg = state_.Dequeue(num);
 
-            if (msg != null)
+            if (msg is not null)
             {
                 Log.OnEvent("Processing queued message: " + num);
 
@@ -1636,8 +1624,10 @@ namespace QuickFix
                 {
                     NextMessage(msg.ToString());
                 }
+
                 return true;
             }
+
             return false;
         }
 
@@ -1663,11 +1653,13 @@ namespace QuickFix
                         Fields.ResetSeqNumFlag resetSeqNumFlag = new QuickFix.Fields.ResetSeqNumFlag(false);
                         if (message.IsSetField(resetSeqNumFlag))
                             message.GetField(resetSeqNumFlag);
+
                         if (resetSeqNumFlag.getValue())
                         {
                             state_.Reset("ResetSeqNumFlag");
                             message.Header.SetField(new Fields.MsgSeqNum(state_.NextSenderMsgSeqNum));
                         }
+
                         state_.SentReset = resetSeqNumFlag.Obj;
                     }
                 }
@@ -1686,6 +1678,7 @@ namespace QuickFix
                 string messageString = message.ToString();
                 if (0 == seqNum)
                     Persist(message, messageString);
+
                 return Send(messageString);
             }
         }
@@ -1704,16 +1697,13 @@ namespace QuickFix
             if (disposing)
             {
                 state_?.Dispose();
-                lock (sessions_)
-                {
-                    sessions_.Remove(this.SessionID);
-                }
+                s_AllSessions.TryRemove(this.SessionID, out _);
             }
 
             disposed_ = true;
         }
-
-        private volatile bool disposed_;
+        
         public bool Disposed => disposed_;
+        private volatile bool disposed_;
     }
 }

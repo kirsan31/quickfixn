@@ -255,9 +255,9 @@ namespace QuickFix
             if(cause is FIXMessageDecoder.DecodeError && cause.InnerException != null)
                 realCause = cause.getCause();
             */
-            if (realCause is System.Net.Sockets.SocketException)
+            if (realCause is SocketException)
             {
-                if (quickFixSession != null && quickFixSession.IsEnabled)
+                if (quickFixSession?.IsEnabled == true)
                     reason = "Socket exception (" + tcpClient_.Client.RemoteEndPoint + "): " + cause.Message;
                 else
                     reason = "Socket (" + tcpClient_.Client.RemoteEndPoint + "): " + cause.Message;
@@ -275,7 +275,7 @@ namespace QuickFix
             else if (realCause is MessageParseError)
             {
                 reason = "Protocol handler exception: " + cause;
-                if (quickFixSession == null)
+                if (quickFixSession is null)
                     disconnectNeeded = true;
                 else
                     disconnectNeeded = false;

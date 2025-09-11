@@ -10,7 +10,7 @@ namespace QuickFix
     /// but using different FIX versions (and/or session qualifiers).
     /// 
     /// </summary>
-    public class SessionID
+    public class SessionID : IEquatable<SessionID>
     {
         #region Properties
         
@@ -89,12 +89,10 @@ namespace QuickFix
 
         public SessionID(string beginString, string senderCompID, string senderSubID, string senderLocationID, string targetCompID, string targetSubID, string targetLocationID, string sessionQualifier)
         {
-            if (beginString == null)
-              throw new ArgumentNullException("beginString");
-            if (senderCompID == null)
-              throw new ArgumentNullException("senderCompID");
-            if (targetCompID == null)
-              throw new ArgumentNullException("targetCompID");
+            ArgumentNullException.ThrowIfNull(beginString);
+            ArgumentNullException.ThrowIfNull(senderCompID);
+            ArgumentNullException.ThrowIfNull(targetCompID);
+
             beginString_ = beginString;
             senderCompID_ = senderCompID;
             senderSubID_ = senderSubID;
@@ -151,10 +149,18 @@ namespace QuickFix
         
         public override bool Equals(object obj)
         {
-            if (obj == null || GetType() != obj.GetType())
+            if (obj is not SessionID sId)
                 return false;
-            SessionID rhs = (SessionID)obj;
-            return id_.Equals(rhs.id_);
+
+            return id_.Equals(sId.id_);
+        }
+
+        public bool Equals(SessionID other)
+        {
+            if (other is null)
+                return false;
+
+            return id_.Equals(other.id_);
         }
     }
 }

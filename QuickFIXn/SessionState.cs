@@ -4,11 +4,10 @@ using MessagesBySeqNum = System.Collections.Generic.Dictionary<ulong, QuickFix.M
 
 namespace QuickFix
 {
-    // v2 TODO - consider making this internal
     /// <summary>
     /// Used by the session communications code. Not intended to be used by applications.
     /// </summary>
-    public class SessionState : IDisposable
+    internal sealed class SessionState : IDisposable
     {
         #region Private Members
 
@@ -19,7 +18,6 @@ namespace QuickFix
         private bool sentLogon_;
         private bool sentLogout_;
         private bool sentReset_;
-        private string logoutReason_ = "";
         private int testRequestCounter_;
         private int heartBtInt_;
         private int heartBtIntAsMilliSecs_;
@@ -30,7 +28,7 @@ namespace QuickFix
         private int logoutTimeout_ = 2;
         private long logoutTimeoutAsMilliSecs_ = 2 * 1000;
         private readonly ResendRange resendRange_ = new ResendRange();
-        private MessagesBySeqNum msgQueue = new MessagesBySeqNum();
+        private MessagesBySeqNum msgQueue = [];
 
         private readonly ILog log_;
 
@@ -54,6 +52,9 @@ namespace QuickFix
 
         #region Synchronized Properties
 
+        /// <summary>
+        /// Default = <see langword="true"/>.
+        /// </summary>
         public bool IsEnabled
         {
             get { lock (sync_) { return isEnabled_; } }
@@ -88,12 +89,6 @@ namespace QuickFix
         {
             get { lock (sync_) { return sentReset_; } }
             set { lock (sync_) { sentReset_ = value; } }
-        }
-
-        public string LogoutReason
-        {
-            get { lock (sync_) { return logoutReason_; } }
-            set { lock (sync_) { logoutReason_ = value; } }
         }
 
         public int TestRequestCounter
@@ -278,7 +273,7 @@ namespace QuickFix
         {
             lock (sync_)
             {
-              MessageStore.Get(begSeqNo, endSeqNo, messages);
+                MessageStore.Get(begSeqNo, endSeqNo, messages);
             }
         }
 
@@ -301,10 +296,7 @@ namespace QuickFix
 
         public void Queue(SeqNumType msgSeqNum, Message msg)
         {
-            if (!MsgQueue.ContainsKey(msgSeqNum))
-            {
-                MsgQueue.Add(msgSeqNum, msg);
-            }
+            MsgQueue.TryAdd(msgSeqNum, msg);
         }
 
         public void ClearQueue()
@@ -312,25 +304,9 @@ namespace QuickFix
             MsgQueue.Clear();
         }
 
-        public QuickFix.Message Dequeue(SeqNumType num)
+        public Message Dequeue(SeqNumType num)
         {
-            if (MsgQueue.ContainsKey(num))
-            {
-                QuickFix.Message msg = MsgQueue[num];
-                MsgQueue.Remove(num);
-                return msg;
-            }
-            return null;
-        }
-
-        public Message Retrieve(SeqNumType msgSeqNum)
-        {
-            Message msg = null;
-            if (MsgQueue.ContainsKey(msgSeqNum))
-            {
-                msg = MsgQueue[msgSeqNum];
-                MsgQueue.Remove(msgSeqNum);
-            }
+            MsgQueue.Remove(num, out Message msg);
             return msg;
         }
 
@@ -407,26 +383,18 @@ namespace QuickFix
 
         #endregion
 
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
         private volatile bool _disposed;
-        protected virtual void Dispose(bool disposing)
+        public void Dispose()
         {
             if (_disposed)
                 return;
 
-            if (disposing)
-            {
-                (log_ as FileLog)?.Dispose(); // This is for backward compatibility with FileLog.
-                MessageStore?.Dispose();
-            }
-
+            isEnabled_ = false; // not using IsEnabled here to avoid lock in Dispose
+            MessageStore?.Dispose();
+            (log_ as FileLog)?.Dispose(); // This is for backward compatibility with FileLog.
             _disposed = true;
-        }
+            GC.SuppressFinalize(this);
+        }        
     }
 }
 

@@ -15,7 +15,7 @@ namespace AcceptanceTest
                 System.Environment.Exit(2);
             }
 
-            FileLog debugLog = new FileLog("log", new SessionID("AT", "Application", "Debug")); 
+            using FileLog debugLog = new FileLog("log", new SessionID("AT", "Application", "Debug")); 
             ThreadedSocketAcceptor acceptor = null;
             try
             {
@@ -27,6 +27,7 @@ namespace AcceptanceTest
                 ILogFactory logFactory = null;
                 if (settings.Get().Has("Verbose") && settings.Get().GetBool("Verbose"))
                     logFactory = new FileLogFactory(settings);
+
                 acceptor = new ThreadedSocketAcceptor(testApp, storeFactory, settings, logFactory);
 
                 acceptor.Start();

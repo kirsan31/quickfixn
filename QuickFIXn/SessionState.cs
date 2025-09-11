@@ -420,7 +420,10 @@ namespace QuickFix
                 return;
 
             if (disposing)
+            {
+                (log_ as FileLog)?.Dispose(); // This is for backward compatibility with FileLog.
                 MessageStore?.Dispose();
+            }
 
             _disposed = true;
         }

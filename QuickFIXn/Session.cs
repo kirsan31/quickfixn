@@ -18,7 +18,7 @@ namespace QuickFix
     {
         #region Private Members
 
-        private static readonly Dictionary<SessionID, Session> sessions_ = new Dictionary<SessionID, Session>();
+        private static readonly Dictionary<SessionID, Session> sessions_ = [];
         private readonly object sync_ = new object();
         private IResponder responder_;
         private readonly SessionSchedule schedule_;
@@ -330,7 +330,7 @@ namespace QuickFix
         /// <returns>the true if Session exists, false otherwise</returns>
         public static bool DoesSessionExist(SessionID sessionID)
         {
-            return LookupSession(sessionID) != null;
+            return LookupSession(sessionID) is not null;
         }
 
         /// <summary>
@@ -342,10 +342,8 @@ namespace QuickFix
         public static bool SendToTarget(Message message, SessionID sessionID)
         {
             message.SetSessionID(sessionID);
-            Session session = Session.LookupSession(sessionID);
-            if (null == session)
-                throw new SessionNotFound(sessionID);
-            return session.Send(message);
+            Session session = LookupSession(sessionID);
+            return session is null ? throw new SessionNotFound(sessionID) : session.Send(message);
         }
 
         /// <summary>

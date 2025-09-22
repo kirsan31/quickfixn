@@ -7,7 +7,7 @@
     <AssemblyName>FixToJson</AssemblyName>
     <Copyright>Copyright © Connamara Systems, LLC 2022</Copyright>
     <Company>Connamara Systems, LLC</Company>
-    <Platforms>AnyCPU;x64</Platforms>
+    <Platforms>AnyCPU</Platforms>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 

@@ -13,7 +13,7 @@
     <Version>1.11.1</Version>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
     <RootNamespace>QuickFix</RootNamespace>
-    <Platforms>AnyCPU;x64</Platforms>
+    <Platforms>AnyCPU</Platforms>
     <RepositoryUrl>https://github.com/connamara/quickfixn</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>FIX, QuickFIX, QuickFIX/n</PackageTags>

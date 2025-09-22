@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>$(TFms)</TargetFrameworks>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Platforms>AnyCPU;x64</Platforms>
+    <Platforms>AnyCPU</Platforms>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 

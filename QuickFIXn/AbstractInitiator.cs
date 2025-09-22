@@ -191,9 +191,28 @@ namespace QuickFix
 
             if (!force)
             {
-                // TODO change this duration to always exceed LogoutTimeout setting
-                for (int second = 0; (second < 20) && IsLoggedOn; ++second)
-                    Thread.Sleep(500);
+                int nOfWait = 0;
+                // Will try to wait +250ms over current LoggedOn session with longest LogoutTimeout.
+                for (int w = 0; w < nOfWait + 1; w++)
+                {
+                    int wait = 0;
+                    lock (sync_)
+                    {
+                        foreach (Session sess in sessions_.Values)
+                        {
+                            if (sess.ConnectionState == SessionConnectionState.Connected && sess.IsLoggedOn)
+                            {
+                                wait = Math.Max(wait, sess.LogoutTimeout * 1000);
+                                nOfWait = (int)(wait / 250 + 0.5);
+                            }
+                        }
+                    }
+
+                    if (wait == 0)
+                        break;
+
+                    Thread.Sleep(250);
+                }
             }
 
             OnStop();
@@ -321,7 +340,7 @@ namespace QuickFix
                 return [.. sessions_.Keys];
         }
 
-        private bool _disposed;
+        private volatile bool _disposed;
         /// <summary>
         /// Any subclasses of AbstractInitiator should override this if they have resources to dispose
         /// that aren't already covered in its OnStop() handler.

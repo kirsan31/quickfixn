@@ -385,6 +385,7 @@ namespace QuickFix
             {
                 if (null == responder_)
                     return false;
+
                 this.Log.OnOutgoing(message);
                 return responder_.Send(message);
             }

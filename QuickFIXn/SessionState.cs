@@ -409,7 +409,6 @@ namespace QuickFix
             MessageStore?.Dispose();
             (log_ as FileLog)?.Dispose(); // This is for backward compatibility with FileLog.
             _disposed = true;
-            GC.SuppressFinalize(this);
         }        
     }
 }

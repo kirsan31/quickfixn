@@ -15,11 +15,8 @@ namespace QuickFix
 
         private readonly object sync_ = new object();
         private readonly Dictionary<SessionID, Session> sessions_ = [];
-        private readonly HashSet<SessionID> pending_ = [];
-        private readonly HashSet<SessionID> connected_ = [];
-        private readonly HashSet<SessionID> disconnected_ = [];
         private volatile bool isStopped_ = true;
-        private Thread thread_;
+        private volatile Thread thread_;
         private SessionFactory sessionFactory_;
 
         #region Properties
@@ -117,8 +114,9 @@ namespace QuickFix
                 if (sessions_.ContainsKey(sessionID))
                     return false;
 
-                sessions_[sessionID] = sessionFactory_.Create(sessionID, dict);
-                SetDisconnected(sessionID);
+                Session session = sessionFactory_.Create(sessionID, dict);
+                session.ConnectionState = SessionConnectionState.Disconnected;
+                sessions_[sessionID] = session;                
             }
 
             return true;
@@ -141,13 +139,10 @@ namespace QuickFix
                     if (session.IsLoggedOn && !terminateActiveSession)
                         return false;
 
-                    if (pending_.Remove(sessionID))
+                    if (session.ConnectionState == SessionConnectionState.Connected || session.ConnectionState == SessionConnectionState.Pending)
                         disconnectRequired = true;
 
-                    if (connected_.Remove(sessionID))
-                        disconnectRequired = true;
-
-                    disconnected_.Remove(sessionID);
+                    session.ConnectionState = SessionConnectionState.None;
                     sessions_.Remove(sessionID);
                 }
             }
@@ -179,50 +174,43 @@ namespace QuickFix
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
 
-            if (IsStopped)
+            Thread thread = thread_;
+            if (IsStopped || thread is null)
                 return;
 
+            thread_ = null;
             lock (sync_)
             {
-                foreach (SessionID sessionID in connected_)
+                // After this processing will be stopped in SocketInitiatorThread.SocketInitiatorThreadStart
+                foreach (Session sess in sessions_.Values)
                 {
-                    if (sessions_.TryGetValue(sessionID, out Session session) && session.IsEnabled)
-                        session.Disable();
+                    if (sess.ConnectionState == SessionConnectionState.Connected || sess.ConnectionState == SessionConnectionState.Pending)
+                        sess.Disable();
                 }
             }
 
             if (!force)
             {
                 // TODO change this duration to always exceed LogoutTimeout setting
-                for (int second = 0; (second < 10) && IsLoggedOn; ++second)
-                    Thread.Sleep(1000);
+                for (int second = 0; (second < 20) && IsLoggedOn; ++second)
+                    Thread.Sleep(500);
             }
 
-            lock (sync_)
-            {
-                HashSet<SessionID> connectedSessionIDs = [.. connected_];
-                foreach (SessionID sessionID in connectedSessionIDs)
-                    SetDisconnected(sessionID);
-            }
-
-            isStopped_ = true;
             OnStop();
 
             // Give OnStop() time to finish its business
-            thread_.Join(5000);
-            thread_ = null;
+            thread.Join(5000);
 
             // dispose all sessions and clear all session sets
             lock (sync_)
             {
-                foreach (Session s in sessions_.Values)
-                    s.Dispose();
+                foreach (Session sess in sessions_.Values)
+                    sess.Dispose();
 
                 sessions_.Clear();
-                pending_.Clear();
-                connected_.Clear();
-                disconnected_.Clear();
             }
+
+            isStopped_ = true;
         }
 
         public bool IsLoggedOn
@@ -231,9 +219,9 @@ namespace QuickFix
             {
                 lock (sync_)
                 {
-                    foreach (SessionID sessionID in connected_)
+                    foreach (Session sess in sessions_.Values)
                     {
-                        if (sessions_.TryGetValue(sessionID, out Session session) && session.IsLoggedOn)
+                        if (sess.ConnectionState == SessionConnectionState.Connected && sess.IsLoggedOn)
                             return true;
                     }
                 }
@@ -292,73 +280,31 @@ namespace QuickFix
         {
             lock (sync_)
             {
-                HashSet<SessionID> disconnectedSessions = [.. disconnected_];
-                foreach (SessionID sessionID in disconnectedSessions)
+                foreach (Session session in sessions_.Values)
                 {
-                    if (sessions_.TryGetValue(sessionID, out Session session) && session.IsEnabled)
+                    if (session.ConnectionState == SessionConnectionState.Disconnected && session.IsEnabled)
                     {
                         if (session.IsNewSession)
                             session.Reset("New session");
 
                         if (session.IsSessionTime)
-                            DoConnect(session, _settings.Get(sessionID));
+                            DoConnect(session, _settings.Get(session.SessionID));
                     }
                 }
             }
         }
 
-        protected void SetPending(SessionID sessionID)
+        protected void SetDisconnected(Session session)
         {
-            lock (sync_)
-            {
-                pending_.Add(sessionID);
-                connected_.Remove(sessionID);
-                disconnected_.Remove(sessionID);
-            }
-        }
+            if (session.ConnectionState == SessionConnectionState.None)
+                return;
 
-        protected void SetConnected(SessionID sessionID)
-        {
             lock (sync_)
             {
-                pending_.Remove(sessionID);
-                connected_.Add(sessionID);
-                disconnected_.Remove(sessionID);
-            }
-        }
-
-        protected void SetDisconnected(SessionID sessionID)
-        {
-            lock (sync_)
-            {
-                pending_.Remove(sessionID);
-                connected_.Remove(sessionID);
-                if (sessions_.ContainsKey(sessionID))
-                    disconnected_.Add(sessionID);
-            }
-        }
-
-        protected bool IsPending(SessionID sessionID)
-        {
-            lock (sync_)
-            {
-                return pending_.Contains(sessionID);
-            }
-        }
-
-        protected bool IsConnected(SessionID sessionID)
-        {
-            lock (sync_)
-            {
-                return connected_.Contains(sessionID);
-            }
-        }
-
-        protected bool IsDisconnected(SessionID sessionID)
-        {
-            lock (sync_)
-            {
-                return disconnected_.Contains(sessionID);
+                if (!session.Disposed && sessions_.ContainsKey(session.SessionID))
+                    session.ConnectionState = SessionConnectionState.Disconnected;
+                else
+                    session.ConnectionState = SessionConnectionState.None;
             }
         }
 

@@ -17,13 +17,13 @@ namespace QuickFix
 
         public const int BUF_SIZE = 512;
 
-        private Thread thread_;
-        private byte[] readBuffer_ = new byte[BUF_SIZE];
-        private Parser parser_;
+        private volatile Thread thread_;
+        private readonly byte[] readBuffer_ = new byte[BUF_SIZE];
+        private readonly Parser parser_;
         protected Stream stream_;
-        private Transport.SocketInitiator initiator_;
-        private Session session_;
-        private IPEndPoint socketEndPoint_;
+        private readonly Transport.SocketInitiator initiator_;
+        private readonly Session session_;
+        private readonly IPEndPoint socketEndPoint_;
         protected SocketSettings socketSettings_;
         private bool isDisconnectRequested_;
 
@@ -45,17 +45,20 @@ namespace QuickFix
             thread_.Start(this);
         }
 
+        /// <summary>
+        /// Call <see cref="Disconnect"/> and wait 2000 ms if needed.
+        /// </summary>
         public void Join()
         {
-            if (thread_ is null)
+            Thread thread = thread_;
+            if (thread is null)
                 return;
 
+            thread_ = null;
             Disconnect();
             // Make sure session's socket reader thread doesn't try to do a Join on itself!
-            if (Environment.CurrentManagedThreadId != thread_.ManagedThreadId)
-                thread_.Join(2000);
-
-            thread_ = null;
+            if (Environment.CurrentManagedThreadId != thread.ManagedThreadId)
+                thread.Join(2000);
         }
 
         public void Connect()
@@ -83,15 +86,10 @@ namespace QuickFix
                 int bytesRead = ReadSome(readBuffer_, 1000);
                 if (bytesRead > 0)
                     parser_.AddToStream(readBuffer_, bytesRead);
-
-                else if (null != session_)
-                {
+                else if (session_ is not null)
                     session_.Next();
-                }
                 else
-                {
                     throw new QuickFIXException("Initiator timed out while reading socket");
-                }
 
                 ProcessStream();
                 return true;
@@ -141,19 +139,15 @@ namespace QuickFix
             try
             {
                 // Begin read if it is not already started
-                if (currentReadRequest_ == null)
-                    currentReadRequest_ = stream_.BeginRead(buffer, 0, buffer.Length, null, null);
-
+                currentReadRequest_ ??= stream_.BeginRead(buffer, 0, buffer.Length, null, null);
                 // Wait for it to complete (given timeout)
                 currentReadRequest_.AsyncWaitHandle.WaitOne(timeoutMilliseconds);
-
                 if (currentReadRequest_.IsCompleted)
                 {
-                    // Make sure to set currentReadRequest_ to before retreiving result 
+                    // Make sure to set currentReadRequest_ to before retrieving result 
                     // so a new read can be started next time even if an exception is thrown
                     var request = currentReadRequest_;
                     currentReadRequest_ = null;
-
                     int bytesRead = stream_.EndRead(request);
                     if (0 == bytesRead)
                         throw new SocketException(System.Convert.ToInt32(SocketError.Shutdown));
@@ -161,9 +155,11 @@ namespace QuickFix
                     return bytesRead;
                 }
                 else
+                {
                     return 0;
+                }
             }
-            catch (System.IO.IOException ex) // Timeout
+            catch (IOException ex) // Timeout
             {
                 var inner = ex.InnerException as SocketException;
                 if (inner != null && inner.SocketErrorCode == SocketError.TimedOut)
@@ -171,12 +167,14 @@ namespace QuickFix
                     // Nothing read 
                     return 0;
                 }
-                else if (inner != null)
+                else if (inner is not null)
                 {
                     throw inner; //rethrow SocketException part (which we have exception logic for)
                 }
                 else
+                {
                     throw; //rethrow original exception
+                }
             }
         }
 

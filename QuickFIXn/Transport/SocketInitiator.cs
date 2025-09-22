@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -24,10 +25,9 @@ namespace QuickFix.Transport
         /// In seconds.
         /// </summary>
         private volatile int reconnectInterval_ = 30;
-        private readonly SocketSettings socketSettings_ = new SocketSettings();
-        private readonly Dictionary<SessionID, SocketInitiatorThread> threads_ = new Dictionary<SessionID, SocketInitiatorThread>();
-        private readonly Dictionary<SessionID, int> sessionToHostNum_ = new Dictionary<SessionID, int>();
-        private readonly object sync_ = new object();
+        private readonly SocketSettings socketSettings_ = new();
+        private readonly ConcurrentDictionary<SessionID, SocketInitiatorThread> threads_ = [];
+        private readonly Dictionary<SessionID, int> sessionToHostNum_ = [];
 
         #endregion
 
@@ -56,7 +56,7 @@ namespace QuickFix.Transport
                     t.Session.Log.OnEvent("Start connecting...");
                     t.Session.LastConnectAttemptTicks = Environment.TickCount64;
                     t.Connect();
-                    t.Initiator.SetConnected(t.Session.SessionID);                    
+                    t.Session.ConnectionState = SessionConnectionState.Connected;
                     t.Session.Log.OnEvent("Connection succeeded.");
                     t.Session.Next();
                     while (t.Read())
@@ -92,16 +92,15 @@ namespace QuickFix.Transport
             finally
             {
                 t.Initiator.RemoveThread(t);
-                t.Initiator.SetDisconnected(t.Session.SessionID);
+                t.Initiator.SetDisconnected(t.Session);
             }
         }
 
         private void AddThread(SocketInitiatorThread thread)
         {
-            lock (sync_)
-            {
-                threads_[thread.Session.SessionID] = thread;
-            }
+            SessionID sessionID = thread.Session.SessionID;
+            RemoveThread(sessionID); // I don't know if this is possible, but we'll remove it just in case.
+            threads_[sessionID] = thread;
         }
 
         private void RemoveThread(SocketInitiatorThread thread)
@@ -111,28 +110,10 @@ namespace QuickFix.Transport
 
         private void RemoveThread(SessionID sessionID)
         {
-            // We can come in here on the thread being removed, and on another thread too in the case 
-            // of dynamic session removal, so make sure we won't deadlock...
-            if (Monitor.TryEnter(sync_))
-            {
-                try
-                {
-                    if (threads_.TryGetValue(sessionID, out SocketInitiatorThread thread))
-                    {
-                        try
-                        {
-                            thread.Join();
-                        }
-                        catch { }
+            if (!threads_.TryRemove(sessionID, out SocketInitiatorThread thread))
+                return;
 
-                        threads_.Remove(sessionID);
-                    }
-                }
-                finally
-                {
-                    Monitor.Exit(sync_);
-                }
-            }
+            try { thread.Join(); } catch { }
         }
 
         private IPEndPoint GetNextSocketEndPoint(SessionID sessionID, Dictionary settings)
@@ -228,7 +209,7 @@ namespace QuickFix.Transport
             try
             {
                 IPEndPoint socketEndPoint = GetNextSocketEndPoint(session.SessionID, settings);
-                SetPending(session.SessionID);
+                session.ConnectionState = SessionConnectionState.Pending;
                 session.Log.OnEvent("Connecting to " + socketEndPoint.Address + " on port " + socketEndPoint.Port);
 
                 //Setup socket settings based on current section

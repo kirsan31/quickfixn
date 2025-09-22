@@ -55,6 +55,12 @@ namespace QuickFix
             }
         }
 
+        public SessionConnectionState ConnectionState
+        {
+            get => state_.ConnectionState;
+            internal set { state_.ConnectionState = value; }
+        }
+
         /// <summary>
         /// <see cref="Environment.TickCount64"/> of last connect attempt.
         /// </summary>
@@ -1599,6 +1605,7 @@ namespace QuickFix
 
             header.SetField(new OrigSendingTime(sendingTime, fix42OrAbove ? TimeStampPrecision : TimeStampPrecision.Second ) );
         }
+
         protected void NextQueued()
         {
             while (NextQueued(state_.MessageStore.NextTargetMsgSeqNum))

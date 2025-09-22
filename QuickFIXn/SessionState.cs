@@ -4,6 +4,14 @@ using MessagesBySeqNum = System.Collections.Generic.Dictionary<ulong, QuickFix.M
 
 namespace QuickFix
 {
+    public enum SessionConnectionState
+    {
+        None,
+        Disconnected,
+        Pending,
+        Connected
+    }
+
     /// <summary>
     /// Used by the session communications code. Not intended to be used by applications.
     /// </summary>
@@ -21,20 +29,27 @@ namespace QuickFix
         private int testRequestCounter_;
         private int heartBtInt_;
         private int heartBtIntAsMilliSecs_;
-        private DateTime lastReceivedTimeDT_ = DateTime.MinValue;
-        private DateTime lastSentTimeDT_ = DateTime.MinValue;
+        private DateTime lastReceivedTimeDT_;
+        private DateTime lastSentTimeDT_;
         private int logonTimeout_ = 10;
         private long logonTimeoutAsMilliSecs_ = 10 * 1000;
         private int logoutTimeout_ = 2;
         private long logoutTimeoutAsMilliSecs_ = 2 * 1000;
-        private readonly ResendRange resendRange_ = new ResendRange();
+        private readonly ResendRange resendRange_ = new();
         private MessagesBySeqNum msgQueue = [];
+        private volatile SessionConnectionState _connectionState;
 
         private readonly ILog log_;
 
         #endregion
 
         #region Unsynchronized Properties
+
+        public SessionConnectionState ConnectionState
+        {
+            get => _connectionState;
+            set => _connectionState = value;
+        }
 
         public IMessageStore MessageStore
         { get; set; }
@@ -390,6 +405,7 @@ namespace QuickFix
                 return;
 
             isEnabled_ = false; // not using IsEnabled here to avoid lock in Dispose
+            ConnectionState = SessionConnectionState.None;
             MessageStore?.Dispose();
             (log_ as FileLog)?.Dispose(); // This is for backward compatibility with FileLog.
             _disposed = true;

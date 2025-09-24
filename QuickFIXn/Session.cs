@@ -62,9 +62,9 @@ namespace QuickFix
         }
 
         /// <summary>
-        /// <see cref="Environment.TickCount64"/> of last connect attempt.
+        /// <see cref="Environment.TickCount64"/> before last connect attempt or after disconnect.
         /// </summary>
-        public long LastConnectAttemptTicks { get; internal set; }
+        public long LastConDiskTicks { get; internal set; }
 
 
         /// <summary>

@@ -54,7 +54,7 @@ namespace QuickFix.Transport
                 try
                 {
                     t.Session.Log.OnEvent("Start connecting...");
-                    t.Session.LastConnectAttemptTicks = Environment.TickCount64;
+                    t.Session.LastConDiskTicks = Environment.TickCount64;
                     t.Connect();
                     t.Session.ConnectionState = SessionConnectionState.Connected;
                     t.Session.Log.OnEvent("Connection succeeded.");

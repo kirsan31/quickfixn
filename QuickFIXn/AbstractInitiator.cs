@@ -318,6 +318,9 @@ namespace QuickFix
             if (session.ConnectionState == SessionConnectionState.None)
                 return;
 
+            if (session.ConnectionState == SessionConnectionState.Connected)
+                session.LastConDiskTicks = Environment.TickCount64;
+
             lock (sync_)
             {
                 if (!session.Disposed && sessions_.ContainsKey(session.SessionID))

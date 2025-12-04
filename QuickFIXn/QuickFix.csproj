@@ -10,7 +10,7 @@
     <Description>Open-source C# implementation of QuickFIX. This package contains the core classes for building applications implementing the FIX protocols. To create an application targeting a specific FIX protocol version, choose the appropriate FIX protocol-specific QuickFIXn package instead.</Description>
     <Copyright>Copyright © 2025 - $([System.DateTime]::UtcNow.Year) QuickFIXn.org. All rights reserved.</Copyright>
     <Authors>Connamara Systems, kirsan31 and QuickFIX/n contributors</Authors>
-    <Version>1.11.2</Version>
+    <Version>1.11.3</Version>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
     <RootNamespace>QuickFix</RootNamespace>
     <Platforms>AnyCPU</Platforms>

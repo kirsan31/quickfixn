@@ -53,8 +53,7 @@ namespace QuickFix.Transport
             {
                 try
                 {
-                    t.Session.Log.OnEvent("Start connecting...");
-                    t.Session.LastConDiskTicks = Environment.TickCount64;
+                    t.Session.Log.OnEvent("Session connecting...");
                     t.Connect();
                     t.Session.ConnectionState = SessionConnectionState.Connected;
                     t.Session.Log.OnEvent("Connection succeeded.");
@@ -208,9 +207,11 @@ namespace QuickFix.Transport
 
             try
             {
+                session.LastConDiskTicks = Environment.TickCount64;
+                session.Log.OnEvent("Creating connection EndPoint.");  
                 IPEndPoint socketEndPoint = GetNextSocketEndPoint(session.SessionID, settings);
                 session.ConnectionState = SessionConnectionState.Pending;
-                session.Log.OnEvent("Connecting to " + socketEndPoint.Address + " on port " + socketEndPoint.Port);
+                session.Log.OnEvent("Starting connection to " + socketEndPoint.Address + " on port " + socketEndPoint.Port);
 
                 //Setup socket settings based on current section
                 var socketSettings = socketSettings_.Clone();

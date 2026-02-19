@@ -19,15 +19,14 @@ namespace QuickFix.Transport
     {
         private static Socket CreateTunnelThruProxy(string destIP, int destPort, ILog logger)
         {
+            const string requestTemplate = "CONNECT {0}:{1} HTTP/1.1\r\nHost: {0}:{1}\r\nProxy-Connection: Keep-Alive\r\n\r\n";
             string destUriWithPort = $"{destIP}:{destPort}";
+
             UriBuilder uriBuilder = new UriBuilder(destUriWithPort);
             Uri destUri = uriBuilder.Uri;
             IWebProxy webProxy = WebRequest.GetSystemWebProxy();
             Uri proxyUri = webProxy.GetProxy(destUri);
-            if (proxyUri is null) // no proxy
-                return null;
-
-            if (webProxy.IsBypassed(destUri))
+            if (proxyUri is null || proxyUri == destUri) // null - no proxy, or same as destUri in case of IsBypassed
                 return null;
 
             logger.OnEvent($"Using system proxy {proxyUri}...");
@@ -39,17 +38,38 @@ namespace QuickFix.Transport
             socketThruProxy.Connect(proxyEndPoint);
             logger.OnEvent("Connection to proxy succeed.");
 
-            string proxyMsg = $"CONNECT {destIP}:{destPort} HTTP/1.1 \n\n";
-            byte[] buffer = Encoding.ASCII.GetBytes(proxyMsg);
-            byte[] buffer12 = new byte[500];
-            socketThruProxy.Send(buffer, buffer.Length, 0);
-            int msg = socketThruProxy.Receive(buffer12, 500, 0);
-            string data;
-            data = Encoding.ASCII.GetString(buffer12);
-            int index = data.IndexOf("200", StringComparison.Ordinal);
+            socketThruProxy.Send(Encoding.ASCII.GetBytes(string.Format(requestTemplate, destIP, destPort)));
+            byte[] buffer = new byte[1024];
+            int bytesRead = socketThruProxy.Receive(buffer);
+            if (bytesRead == 0)
+                throw new ApplicationException($"Connection failed to {destUriWithPort} through proxy server {proxyUri}. Zero response size.");
 
-            if (index < 0)
-                throw new ApplicationException($"Connection failed to {destUriWithPort} through proxy server {proxyUri}.");
+            // HTTP/1.1 2** OK
+            string response = Encoding.ASCII.GetString(buffer, 0, bytesRead);
+            int startIndex;
+            if ((startIndex = response.IndexOf("HTTP", StringComparison.OrdinalIgnoreCase)) == -1)
+                throw new ApplicationException($"Connection failed to {destUriWithPort} through proxy server {proxyUri}. Wrong response: {response}");
+            
+            int spacePos = response.IndexOf(' ', startIndex);
+            if (spacePos == -1 || response.Length <= spacePos + 2)
+                throw new ApplicationException($"Connection failed to {destUriWithPort} through proxy server {proxyUri}. Wrong response: {response}");
+
+            ReadOnlySpan<char> status = response.AsSpan()[(spacePos + 1)..];
+            spacePos = status.IndexOf(' ');
+            if (spacePos < 0)
+                throw new ApplicationException($"Connection failed to {destUriWithPort} through proxy server {proxyUri}. Wrong response: {response}");
+
+            status = status[..spacePos];
+            //Status code should be 2**
+            if (int.TryParse(status, out int statusCode))
+            {
+                if (statusCode > 299 || statusCode < 200)
+                    throw new ApplicationException($"Connection failed to {destUriWithPort} through proxy server {proxyUri}. Response: {response}");
+            }
+            else
+            {
+                throw new ApplicationException($"Connection failed to {destUriWithPort} through proxy server {proxyUri}. Wrong response: {response}");
+            }
 
             logger.OnEvent($"Connection to {destUriWithPort} thru proxy succeed.");
             return socketThruProxy;

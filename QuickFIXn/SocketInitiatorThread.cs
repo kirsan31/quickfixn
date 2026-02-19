@@ -76,7 +76,7 @@ namespace QuickFix
         /// <returns>Stream representing the (network)connection to the other party</returns>
         protected virtual Stream SetupStream()
         {
-            return QuickFix.Transport.StreamFactory.CreateClientStream(socketEndPoint_, socketSettings_, session_.Log);
+            return Transport.StreamFactory.CreateClientStream(socketEndPoint_, socketSettings_, session_.Log);
         }
 
         public bool Read()
@@ -108,7 +108,7 @@ namespace QuickFix
 
                 return false;                    
             }
-            catch (System.Exception e)
+            catch (Exception e)
             {
                 if (session_ is not null)
                     session_.Disconnect(e.ToString(), true);

@@ -53,20 +53,15 @@ namespace QuickFix.Transport
             {
                 try
                 {
-                    t.Session.Log.OnEvent("Session connecting...");
+                    t.Session.Log.OnEvent("Connecting...");
+                    t.Session.LastConDiskTicks = Environment.TickCount64;                    
                     t.Connect();
                     t.Session.ConnectionState = SessionConnectionState.Connected;
-                    t.Session.Log.OnEvent("Connection succeeded.");
+                    t.Session.Log.OnEvent("All connection procedures succeed. Checking session...");
                     t.Session.Next();
                     while (t.Read())
                     {
                     }
-
-                    // https://github.com/connamara/quickfixn/issues/978
-                    //if (t.Initiator.IsStopped)
-                    //    t.Initiator.RemoveThread(t);
-
-                    //t.Initiator.SetDisconnected(t.Session.SessionID);
                 }
                 catch (IOException ex) // Can be exception when connecting, during ssl authentication or when reading
                 {
@@ -133,7 +128,7 @@ namespace QuickFix.Transport
             {
                 var hostName = settings.GetString(hostKey);
                 IPAddress[] addrs = Dns.GetHostAddresses(hostName);
-                int port = System.Convert.ToInt32(settings.GetLong(portKey));
+                int port = Convert.ToInt32(settings.GetLong(portKey));
                 sessionToHostNum_[sessionID] = ++num;
 
                 socketSettings_.ServerCommonName = hostName;
@@ -206,24 +201,27 @@ namespace QuickFix.Transport
                 return;
 
             try
-            {
-                session.LastConDiskTicks = Environment.TickCount64;
-                session.Log.OnEvent("Creating connection EndPoint.");  
+            {                
+                session.Log.OnEvent("Creating connection EndPoint...");  
                 IPEndPoint socketEndPoint = GetNextSocketEndPoint(session.SessionID, settings);
                 session.ConnectionState = SessionConnectionState.Pending;
-                session.Log.OnEvent("Starting connection to " + socketEndPoint.Address + " on port " + socketEndPoint.Port);
+                session.Log.OnEvent($"EndPoint {socketEndPoint.Address}:{socketEndPoint.Port} created. Creating and starting SocketInitiatorThread...");
 
                 //Setup socket settings based on current section
                 var socketSettings = socketSettings_.Clone();
                 socketSettings.Configure(settings);
 
-                // Create a Ssl-SocketInitiatorThread if a certificate is given
+                // Will create a Ssl-SocketInitiatorThread if configured.
                 SocketInitiatorThread t = new SocketInitiatorThread(this, session, socketEndPoint, socketSettings);
                 t.Start();
                 AddThread(t);
             }
             catch (Exception e)
             {
+                // Dns.GetHostAddresses in GetNextSocketEndPoint can throw SocketException like "No such host is known" during internet problems.
+                if ((e as ConfigError)?.InnerException is SocketException)
+                    session.LastConDiskTicks = Environment.TickCount64;
+
                 session.Log.OnErrorEvent(e.Message);
             }
         }

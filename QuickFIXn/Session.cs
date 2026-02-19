@@ -310,7 +310,7 @@ namespace QuickFix
 
             s_AllSessions[this.SessionID] = this;
             this.Application.OnCreate(this.SessionID);
-            this.Log.OnEvent("Created session");
+            this.Log.OnEvent($"Session {SessionID} created.");
         }
 
         #region Static Methods

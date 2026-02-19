@@ -18,7 +18,7 @@ namespace QuickFix
         /// Gets a value that specifies whether the <see cref="T:System.Net.Sockets.Socket"/> is using the Nagle algorithm.
         /// </summary>
         /// <value>
-        /// <c>false</c> if the socket uses the Nagle algorithm; otherwise, <c>true</c>. The default is <c>false</c>.
+        /// <c>false</c> if the socket uses the Nagle algorithm; otherwise, <c>true</c>. The default is <c>true</c>.
         /// </value>
         public bool SocketNodelay { get; internal set; }
 

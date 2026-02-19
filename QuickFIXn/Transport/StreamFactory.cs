@@ -17,16 +17,23 @@ namespace QuickFix.Transport
     /// </summary>
     public static class StreamFactory
     {
-        private static Socket CreateTunnelThruProxy(string destIP, int destPort, ILog logger)
+        /// <summary>
+        /// Creates the tunnel thru proxy if needed.
+        /// </summary>
+        /// <returns><see langword="null"/> if not using proxy</returns>
+        private static Socket CreateTunnelThruProxy(string destIP, int destPort, SocketSettings settings, ILog logger)
         {
             const string requestTemplate = "CONNECT {0}:{1} HTTP/1.1\r\nHost: {0}:{1}\r\nProxy-Connection: Keep-Alive\r\n\r\n";
-            string destUriWithPort = $"{destIP}:{destPort}";
 
+            if (settings.SocketIgnoreSystemProxy)
+                return null;
+            
+            string destUriWithPort = $"{destIP}:{destPort}";
             UriBuilder uriBuilder = new UriBuilder(destUriWithPort);
             Uri destUri = uriBuilder.Uri;
             IWebProxy webProxy = WebRequest.GetSystemWebProxy();
             Uri proxyUri = webProxy.GetProxy(destUri);
-            if (proxyUri is null || proxyUri == destUri) // null - no proxy, or same as destUri in case of IsBypassed
+            if (proxyUri is null || proxyUri == destUri) // null - no system proxy, or same as destUri in case of IsBypassed
                 return null;
 
             logger.OnEvent($"Using system proxy {proxyUri}...");
@@ -35,6 +42,13 @@ namespace QuickFix.Transport
             IPAddress address = proxyEntry.First(a => a.AddressFamily == AddressFamily.InterNetwork);
             IPEndPoint proxyEndPoint = new IPEndPoint(address, iPort);
             Socket socketThruProxy = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            socketThruProxy.NoDelay = settings.SocketNodelay;
+            if (settings.SocketReceiveBufferSize.HasValue)
+                socketThruProxy.ReceiveBufferSize = settings.SocketReceiveBufferSize.Value;
+
+            if (settings.SocketSendBufferSize.HasValue)
+                socketThruProxy.SendBufferSize = settings.SocketSendBufferSize.Value;
+
             socketThruProxy.Connect(proxyEndPoint);
             logger.OnEvent("Connection to proxy succeed.");
 
@@ -88,14 +102,9 @@ namespace QuickFix.Transport
             Stream stream = null;
             try
             {
-                if (!settings.SocketIgnoreSystemProxy)
-                {
-                    // If system has configured a proxy for this config, use it.
-                    socket = CreateTunnelThruProxy(endpoint.Address.ToString(), endpoint.Port, logger);
-                }
-
-                // No proxy. Set up a regular socket.
-                if (socket is null)
+                // If system has configured a proxy for this config, use it.
+                socket = CreateTunnelThruProxy(endpoint.Address.ToString(), endpoint.Port, settings, logger);                
+                if (socket is null) // No proxy. Set up a regular socket.
                 {
                     socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                     socket.NoDelay = settings.SocketNodelay;

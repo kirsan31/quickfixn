@@ -58,6 +58,14 @@ namespace QuickFix
         /// </value>
         public int? SocketSendTimeout { get; internal set; }
 
+        /// <summary>
+        /// Gets a value that specifies whether the system proxy server settings should be ignored.
+        /// </summary>
+        /// <value>
+        /// <c>false</c> if connection should use system proxy; otherwise for ignoring system proxy, <c>true</c>. The default is <c>false</c>.
+        /// </value>
+        public bool SocketIgnoreSystemProxy { get; internal set; }
+
         #endregion
 
         #region SSL Settings
@@ -161,6 +169,9 @@ namespace QuickFix
         /// <param name="dictionary">the dictionary to read the settings from</param>
         public void Configure(QuickFix.Dictionary dictionary)
         {
+            if (dictionary.Has(SessionSettings.SOCKET_IGNORE_SYSTEM_PROXY))
+                SocketIgnoreSystemProxy = dictionary.GetBool(SessionSettings.SOCKET_IGNORE_SYSTEM_PROXY);
+
             if (dictionary.Has(SessionSettings.SOCKET_NODELAY))
                 SocketNodelay = dictionary.GetBool(SessionSettings.SOCKET_NODELAY);
 

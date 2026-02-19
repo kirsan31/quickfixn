@@ -88,8 +88,11 @@ namespace QuickFix.Transport
             Stream stream = null;
             try
             {
-                // If system has configured a proxy for this config, use it.
-                socket = CreateTunnelThruProxy(endpoint.Address.ToString(), endpoint.Port, logger);
+                if (!settings.SocketIgnoreSystemProxy)
+                {
+                    // If system has configured a proxy for this config, use it.
+                    socket = CreateTunnelThruProxy(endpoint.Address.ToString(), endpoint.Port, logger);
+                }
 
                 // No proxy. Set up a regular socket.
                 if (socket is null)

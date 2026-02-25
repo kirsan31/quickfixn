@@ -66,6 +66,26 @@ namespace QuickFix
         /// </value>
         public bool SocketIgnoreSystemProxy { get; internal set; }
 
+        /// <summary>
+        /// Used when a client needs to connect to the acceptor over a proxy.
+        /// </summary>
+        public string ProxyHost { get; internal set; }
+
+        /// <summary>
+        /// Used when a client needs to connect to the acceptor over a proxy.
+        /// </summary>
+        public int ProxyPort { get; internal set; }
+
+        /// <summary>
+        /// Used when a client needs to connect to the acceptor over a proxy with a user name and password.
+        /// </summary>
+        public string ProxyUserName { get; internal set; }
+
+        /// <summary>
+        /// Used when a client needs to connect to the acceptor over a proxy with a user name and password.
+        /// </summary>
+        public string ProxyPassword { get; internal set; }
+
         #endregion
 
         #region SSL Settings
@@ -171,6 +191,18 @@ namespace QuickFix
         {
             if (dictionary.Has(SessionSettings.SOCKET_IGNORE_SYSTEM_PROXY))
                 SocketIgnoreSystemProxy = dictionary.GetBool(SessionSettings.SOCKET_IGNORE_SYSTEM_PROXY);
+
+            if (dictionary.Has(SessionSettings.PROXY_HOST))
+                ProxyHost = dictionary.GetString(SessionSettings.PROXY_HOST);
+
+            if (dictionary.Has(SessionSettings.PROXY_PORT))
+                ProxyPort = dictionary.GetInt(SessionSettings.PROXY_PORT);
+
+            if (dictionary.Has(SessionSettings.PROXY_USER_NAME))
+                ProxyUserName = dictionary.GetString(SessionSettings.PROXY_USER_NAME);
+
+            if (dictionary.Has(SessionSettings.PROXY_PASSWORD))
+                ProxyPassword = dictionary.GetString(SessionSettings.PROXY_PASSWORD);
 
             if (dictionary.Has(SessionSettings.SOCKET_NODELAY))
                 SocketNodelay = dictionary.GetBool(SessionSettings.SOCKET_NODELAY);

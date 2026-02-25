@@ -71,6 +71,10 @@ namespace QuickFix
         public const string CHECK_LATENCY = "CheckLatency";
         public const string MAX_LATENCY = "MaxLatency";
         public const string SOCKET_IGNORE_SYSTEM_PROXY = "SocketIgnoreSystemProxy";
+        public const string PROXY_HOST = "ProxyHost";
+        public const string PROXY_PORT = "ProxyPort";
+        public const string PROXY_USER_NAME = "ProxyUserName";
+        public const string PROXY_PASSWORD = "ProxyPassword";
 
         public const string SSL_ENABLE = "SSLEnable";
         public const string SSL_SERVERNAME = "SSLServerName";

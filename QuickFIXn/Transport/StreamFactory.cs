@@ -23,24 +23,39 @@ namespace QuickFix.Transport
         /// <returns><see langword="null"/> if not using proxy</returns>
         private static Socket CreateTunnelThruProxy(string destIP, int destPort, SocketSettings settings, ILog logger)
         {
-            const string requestTemplate = "CONNECT {0}:{1} HTTP/1.1\r\nHost: {0}:{1}\r\nProxy-Connection: Keep-Alive\r\n\r\n";
+            const string requestTemplate = "CONNECT {0}:{1} HTTP/1.1\r\nHost: {0}:{1}\r\n\r\n";
+            const string requestAuthTemplate = "CONNECT {0}:{1} HTTP/1.1\r\nHost: {0}:{1}\r\nProxy-Authorization: Basic {2}\r\n\r\n";
 
-            if (settings.SocketIgnoreSystemProxy)
-                return null;
-            
+            IPAddress[] proxyEntry;
+            IPAddress address;
+            IPEndPoint proxyEndPoint;
             string destUriWithPort = $"{destIP}:{destPort}";
-            UriBuilder uriBuilder = new UriBuilder(destUriWithPort);
-            Uri destUri = uriBuilder.Uri;
-            IWebProxy webProxy = WebRequest.GetSystemWebProxy();
-            Uri proxyUri = webProxy.GetProxy(destUri);
-            if (proxyUri is null || proxyUri == destUri) // null - no system proxy, or same as destUri in case of IsBypassed
-                return null;
 
-            logger.OnEvent($"Using system proxy {proxyUri}...");
-            IPAddress[] proxyEntry = Dns.GetHostAddresses(proxyUri.Host);
-            int iPort = proxyUri.Port;
-            IPAddress address = proxyEntry.First(a => a.AddressFamily == AddressFamily.InterNetwork);
-            IPEndPoint proxyEndPoint = new IPEndPoint(address, iPort);
+            if (IsProxySet(settings))
+            {
+                logger.OnEvent($"Using provided proxy {settings.ProxyHost}:{settings.ProxyPort}...");
+                proxyEntry = Dns.GetHostAddresses(settings.ProxyHost);
+                address = proxyEntry.First(a => a.AddressFamily == AddressFamily.InterNetwork);
+                proxyEndPoint = new IPEndPoint(address, settings.ProxyPort);
+            }
+            else // trying system proxy
+            {
+                if (settings.SocketIgnoreSystemProxy)
+                    return null;
+                
+                UriBuilder uriBuilder = new UriBuilder(destUriWithPort);
+                Uri destUri = uriBuilder.Uri;
+                IWebProxy webProxy = WebRequest.GetSystemWebProxy();
+                Uri proxyUri = webProxy.GetProxy(destUri);
+                if (proxyUri is null || proxyUri == destUri) // null - no system proxy, or same as destUri in case of IsBypassed
+                    return null;
+
+                logger.OnEvent($"Using system proxy {proxyUri}...");
+                proxyEntry = Dns.GetHostAddresses(proxyUri.Host);
+                address = proxyEntry.First(a => a.AddressFamily == AddressFamily.InterNetwork);
+                proxyEndPoint = new IPEndPoint(address, proxyUri.Port);
+            }
+
             Socket socketThruProxy = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             socketThruProxy.NoDelay = settings.SocketNodelay;
             if (settings.SocketReceiveBufferSize.HasValue)
@@ -50,39 +65,49 @@ namespace QuickFix.Transport
                 socketThruProxy.SendBufferSize = settings.SocketSendBufferSize.Value;
 
             socketThruProxy.Connect(proxyEndPoint);
-            logger.OnEvent("Connection to proxy succeed.");
+            string reqest;
+            if (IsProxySet(settings) && AreProxyCredntialsSet(settings))
+            {
+                logger.OnEvent($"Initial connection to proxy {proxyEndPoint} succeed. Trying connect thru it with provided credentials...");
+                reqest = string.Format(requestAuthTemplate, destIP, destPort, Convert.ToBase64String(Encoding.GetEncoding("ISO-8859-1").GetBytes($"{settings.ProxyUserName}:{settings.ProxyPassword}")));
+            }
+            else
+            {
+                logger.OnEvent($"Initial connection to proxy {proxyEndPoint} succeed. Trying connect thru it...");
+                reqest = string.Format(requestTemplate, destIP, destPort);
+            }
 
-            socketThruProxy.Send(Encoding.ASCII.GetBytes(string.Format(requestTemplate, destIP, destPort)));
+            socketThruProxy.Send(Encoding.ASCII.GetBytes(reqest));
             byte[] buffer = new byte[1024];
             int bytesRead = socketThruProxy.Receive(buffer);
             if (bytesRead == 0)
-                throw new ApplicationException($"Connection failed to {destUriWithPort} through proxy server {proxyUri}. Zero response size.");
+                throw new ApplicationException($"Connection failed to {destUriWithPort} thru proxy. Zero response size.");
 
             // HTTP/1.1 2** OK
             string response = Encoding.ASCII.GetString(buffer, 0, bytesRead);
             int startIndex;
             if ((startIndex = response.IndexOf("HTTP", StringComparison.OrdinalIgnoreCase)) == -1)
-                throw new ApplicationException($"Connection failed to {destUriWithPort} through proxy server {proxyUri}. Wrong response: {response}");
+                throw new ApplicationException($"Connection failed to {destUriWithPort} thru proxy. Wrong response: {response}");
             
             int spacePos = response.IndexOf(' ', startIndex);
             if (spacePos == -1 || response.Length <= spacePos + 2)
-                throw new ApplicationException($"Connection failed to {destUriWithPort} through proxy server {proxyUri}. Wrong response: {response}");
+                throw new ApplicationException($"Connection failed to {destUriWithPort} thru proxy. Wrong response: {response}");
 
             ReadOnlySpan<char> status = response.AsSpan()[(spacePos + 1)..];
             spacePos = status.IndexOf(' ');
             if (spacePos < 0)
-                throw new ApplicationException($"Connection failed to {destUriWithPort} through proxy server {proxyUri}. Wrong response: {response}");
+                throw new ApplicationException($"Connection failed to {destUriWithPort} thru proxy. Wrong response: {response}");
 
             status = status[..spacePos];
             //Status code should be 2**
             if (int.TryParse(status, out int statusCode))
             {
                 if (statusCode > 299 || statusCode < 200)
-                    throw new ApplicationException($"Connection failed to {destUriWithPort} through proxy server {proxyUri}. Response: {response}");
+                    throw new ApplicationException($"Connection failed to {destUriWithPort} thru proxy. Response: {response}");
             }
             else
             {
-                throw new ApplicationException($"Connection failed to {destUriWithPort} through proxy server {proxyUri}. Wrong response: {response}");
+                throw new ApplicationException($"Connection failed to {destUriWithPort} thru proxy. Wrong response: {response}");
             }
 
             logger.OnEvent($"Connection to {destUriWithPort} thru proxy succeed.");
@@ -256,6 +281,16 @@ namespace QuickFix.Transport
             {
                 store.Close();
             }
+        }
+
+        private static bool AreProxyCredntialsSet(SocketSettings settings)
+        {
+            return !string.IsNullOrEmpty(settings.ProxyUserName) && !string.IsNullOrEmpty(settings.ProxyPassword);
+        }
+
+        private static bool IsProxySet(SocketSettings settings)
+        {
+            return !string.IsNullOrEmpty(settings.ProxyHost) && settings.ProxyPort != 0;
         }
 
 

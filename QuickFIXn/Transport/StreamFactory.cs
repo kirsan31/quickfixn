@@ -8,6 +8,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Net.Security;
 using System.Diagnostics;
 using System.Net;
+using System.Threading;
 
 namespace QuickFix.Transport
 {
@@ -326,16 +327,24 @@ namespace QuickFix.Transport
                 {
                     // Setup secure SSL Communication
                     X509CertificateCollection clientCertificates = GetClientCertificates();
-                    sslStream.AuthenticateAsClient(socketSettings_.ServerCommonName,
-                        clientCertificates,
-                        socketSettings_.SslProtocol,
-                        socketSettings_.CheckCertificateRevocation);
+                    logger.OnEvent("Starting SSL authentication...");
+                    SslClientAuthenticationOptions options = new SslClientAuthenticationOptions()
+                    {
+                        TargetHost = socketSettings_.ServerCommonName,
+                        ClientCertificates = clientCertificates,
+                        EnabledSslProtocols = socketSettings_.SslProtocol,
+                        CertificateRevocationCheckMode = socketSettings_.CheckCertificateRevocation ? X509RevocationMode.Online : X509RevocationMode.NoCheck,
+                        EncryptionPolicy = EncryptionPolicy.RequireEncryption
+                    };
+
+                    using CancellationTokenSource cTS = new CancellationTokenSource(10_000);
+                    sslStream.AuthenticateAsClientAsync(options, cTS.Token).GetAwaiter().GetResult();
                     logger.OnEvent($"SSL authentication succeed. IsEncrypted {sslStream.IsEncrypted}, IsSigned {sslStream.IsSigned}.");
 
                 }
-                catch (System.Security.Authentication.AuthenticationException ex)
+                catch (Exception ex)
                 {
-                    log_.OnErrorEvent("Unable to perform authentication against server: " + ex.Message);
+                    log_.OnErrorEvent("Unable to perform SSL authentication against server: " + ex.Message);
                     sslStream.Dispose();
                     throw;
                 }

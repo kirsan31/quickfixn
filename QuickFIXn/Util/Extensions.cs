@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 
 namespace QuickFix.Util;
 
@@ -22,5 +23,29 @@ internal static class Extensions
         }
 
         await t.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+    }
+
+    /// <summary>
+    /// Gets the task from <see cref="IAsyncResult"/>.
+    /// </summary>
+    /// <param name="asyncResult">The asynchronous result.</param>
+    /// <returns><see langword="null"/> if not found.</returns>
+    public static Task GetTask(this IAsyncResult asyncResult)
+    {
+        var asyncRes = asyncResult;
+        if (asyncRes is null)
+            return null;
+
+        if (asyncRes is Task task)
+            return task;
+
+        try
+        {
+            return TaskToAsyncResult.Unwrap(asyncRes);
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

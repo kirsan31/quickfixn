@@ -145,11 +145,11 @@ namespace QuickFix
                 currentReadRequest_ ??= stream_.BeginRead(buffer, 0, buffer.Length, null, null);
                 // Wait for it to complete (given timeout)                
                 WaitHandle wH;
-                Task task = currentReadRequest_ as Task;
+                Task task = currentReadRequest_.GetTask();
                 if (task is not null) // fast way without creating a new WaitHandle
                 {
-                    task.Wait(timeoutMilliseconds);
                     wH = null;
+                    task.Wait(timeoutMilliseconds);                    
                 }
                 else
                 {                    
@@ -178,7 +178,7 @@ namespace QuickFix
             catch (IOException ex) // Timeout
             {
                 var inner = ex.InnerException as SocketException;
-                if (inner != null && inner.SocketErrorCode == SocketError.TimedOut)
+                if (inner?.SocketErrorCode == SocketError.TimedOut)
                 {
                     // Nothing read 
                     return 0;
@@ -217,7 +217,7 @@ namespace QuickFix
             isDisconnectRequested_ = true;
             if (currentReadRequest_ is not null)
             {
-                (currentReadRequest_ as Task)?.ForgetTask();
+                currentReadRequest_.GetTask()?.ForgetTask();
                 currentReadRequest_ = null;
             }
 

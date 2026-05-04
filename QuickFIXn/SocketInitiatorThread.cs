@@ -122,7 +122,7 @@ namespace QuickFix
         /// <summary>
         /// Keep a handle to the current outstanding read request (if any)
         /// </summary>
-        private IAsyncResult currentReadRequest_;
+        private volatile IAsyncResult currentReadRequest_;
         /// <summary>
         /// Reads data from the network into the specified buffer.
         /// It will wait up to the specified number of milliseconds for data to arrive,
@@ -141,16 +141,18 @@ namespace QuickFix
                 // Begin read if it is not already started
                 currentReadRequest_ ??= stream_.BeginRead(buffer, 0, buffer.Length, null, null);
                 // Wait for it to complete (given timeout)
-                currentReadRequest_.AsyncWaitHandle.WaitOne(timeoutMilliseconds);
+                WaitHandle wH = currentReadRequest_.AsyncWaitHandle;
+                wH.WaitOne(timeoutMilliseconds);
                 if (currentReadRequest_.IsCompleted)
                 {
-                    // Make sure to set currentReadRequest_ to before retrieving result 
+                    // Make sure to set currentReadRequest_ to null before retrieving result 
                     // so a new read can be started next time even if an exception is thrown
                     var request = currentReadRequest_;
                     currentReadRequest_ = null;
+                    wH.Dispose();
                     int bytesRead = stream_.EndRead(request);
                     if (0 == bytesRead)
-                        throw new SocketException(System.Convert.ToInt32(SocketError.Shutdown));
+                        throw new SocketException(Convert.ToInt32(SocketError.Shutdown));
 
                     return bytesRead;
                 }

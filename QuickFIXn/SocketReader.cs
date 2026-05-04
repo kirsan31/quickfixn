@@ -2,6 +2,8 @@
 using System.IO;
 using System;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace QuickFix
 {
@@ -13,8 +15,8 @@ namespace QuickFix
         public const int BUF_SIZE = 4096;
         readonly byte[] readBuffer_ = new byte[BUF_SIZE];
         private readonly Parser parser_ = new Parser();
-        private Session qfSession_; //will be null when initialized
-        private readonly Stream stream_;     //will be null when initialized
+        private Session qfSession_; // will be null when initialized???
+        private readonly Stream stream_; // will be not null when initialized
         private readonly TcpClient tcpClient_;
         private readonly ClientHandlerThread responder_;
         private readonly AcceptorSocketDescriptor acceptorDescriptor_;
@@ -22,7 +24,7 @@ namespace QuickFix
         /// <summary>
         /// Keep a handle to the current outstanding read request (if any)
         /// </summary>
-        private IAsyncResult currentReadRequest_;
+        private volatile IAsyncResult currentReadRequest_;
 
         public SocketReader(TcpClient tcpClient, SocketSettings settings, ClientHandlerThread responder)
             : this(tcpClient, settings, responder, null)
@@ -82,29 +84,29 @@ namespace QuickFix
             try
             {
                 // Begin read if it is not already started
-                if (currentReadRequest_ == null)
-                    currentReadRequest_ = stream_.BeginRead(buffer, 0, buffer.Length, null, null);
-
+                currentReadRequest_ ??= stream_.BeginRead(buffer, 0, buffer.Length, null, null);
                 // Wait for it to complete (given timeout)
-                currentReadRequest_.AsyncWaitHandle.WaitOne(timeoutMilliseconds);
-
+                WaitHandle wH = currentReadRequest_.AsyncWaitHandle;
+                wH.WaitOne(timeoutMilliseconds);
                 if (currentReadRequest_.IsCompleted)
                 {
-                    // Make sure to set currentReadRequest_ to before retreiving result 
+                    // Make sure to set currentReadRequest_ to null before retrieving result 
                     // so a new read can be started next time even if an exception is thrown
                     var request = currentReadRequest_;
                     currentReadRequest_ = null;
-
+                    wH.Dispose();
                     int bytesRead = stream_.EndRead(request);
                     if (0 == bytesRead)
-                        throw new SocketException(System.Convert.ToInt32(SocketError.Shutdown));
+                        throw new SocketException(Convert.ToInt32(SocketError.Shutdown));
 
                     return bytesRead;
                 }
                 else
+                {
                     return 0;
+                }
             }
-            catch (System.IO.IOException ex) // Timeout
+            catch (IOException ex) // Timeout
             {
                 var inner = ex.InnerException as SocketException;
                 if (inner != null && inner.SocketErrorCode == SocketError.TimedOut)
@@ -117,7 +119,9 @@ namespace QuickFix
                     throw inner; //rethrow SocketException part (which we have exception logic for)
                 }
                 else
+                {
                     throw; //rethrow original exception
+                }
             }
         }
 

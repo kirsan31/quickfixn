@@ -4,6 +4,9 @@ using System.Threading;
 using System.IO;
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
+
+using QuickFix.Util;
 
 namespace QuickFix
 {
@@ -140,16 +143,27 @@ namespace QuickFix
             {
                 // Begin read if it is not already started
                 currentReadRequest_ ??= stream_.BeginRead(buffer, 0, buffer.Length, null, null);
-                // Wait for it to complete (given timeout)
-                WaitHandle wH = currentReadRequest_.AsyncWaitHandle;
-                wH.WaitOne(timeoutMilliseconds);
+                // Wait for it to complete (given timeout)                
+                WaitHandle wH;
+                Task task = currentReadRequest_ as Task;
+                if (task is not null) // fast way without creating a new WaitHandle
+                {
+                    task.Wait(timeoutMilliseconds);
+                    wH = null;
+                }
+                else
+                {                    
+                    wH = currentReadRequest_.AsyncWaitHandle;
+                    wH.WaitOne(timeoutMilliseconds);
+                }
+
                 if (currentReadRequest_.IsCompleted)
                 {
                     // Make sure to set currentReadRequest_ to null before retrieving result 
                     // so a new read can be started next time even if an exception is thrown
                     var request = currentReadRequest_;
                     currentReadRequest_ = null;
-                    wH.Dispose();
+                    wH?.Dispose();
                     int bytesRead = stream_.EndRead(request);
                     if (0 == bytesRead)
                         throw new SocketException(Convert.ToInt32(SocketError.Shutdown));
@@ -201,6 +215,12 @@ namespace QuickFix
         public void Disconnect()
         {
             isDisconnectRequested_ = true;
+            if (currentReadRequest_ is not null)
+            {
+                (currentReadRequest_ as Task)?.ForgetTask();
+                currentReadRequest_ = null;
+            }
+
             stream_?.Close();
         }
 
